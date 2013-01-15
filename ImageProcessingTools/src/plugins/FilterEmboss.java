@@ -17,6 +17,9 @@
 package plugins;
 
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
@@ -29,6 +32,10 @@ public class FilterEmboss implements WhiteboxPlugin {
     
     private WhiteboxPluginHost myHost = null;
     private String[] args;
+    private int completedRows; //used to update progress
+    private int totalRows; //used for update progress
+    private boolean message = true;
+    
     /**
      * Used to retrieve the plugin tool's name. This is a short, unique name containing no spaces.
      * @return String containing plugin name.
@@ -137,8 +144,11 @@ public class FilterEmboss implements WhiteboxPlugin {
     }
     
     private void cancelOperation() {
-        showFeedback("Operation cancelled.");
-        updateProgress("Progress: ", 0);
+        if (message) {
+            message = false;
+            showFeedback("Operation cancelled.");
+            updateProgress("Progress: ", 0);
+        }
     }
     
     private boolean amIActive = false;
@@ -151,25 +161,121 @@ public class FilterEmboss implements WhiteboxPlugin {
         return amIActive;
     }
 
+    
+    private class embossWork implements Runnable {
+        int row;
+        int col;
+        int rows;
+        int cols;
+        double noData;
+        int numPixelsInFilter;
+        int[] dX;
+        int[] dY;
+        double[] weights;
+        WhiteboxRaster inputFile;
+        WhiteboxRaster outputFile;
+ 
+        //constructor
+        public embossWork(int _row, int _rows, int _cols, WhiteboxRaster _inputFile, WhiteboxRaster _outputFile, double _noData, int _numPixelsInFilter, int[] _dX, int[] _dY, double[] _weights) {
+            row = _row;
+            rows = _rows;
+            cols = _cols;
+            noData = _noData;
+            numPixelsInFilter = _numPixelsInFilter;
+            dX = _dX;
+            dY = _dY;
+            weights = _weights;
+            inputFile = _inputFile;
+            outputFile = _outputFile;
+        }
+        
+        static final int chunkSize = 500;
+        @Override
+        public void run() {
+            double centreValue, sum, z, progress;
+            int a, x, y, i, j;
+            
+            int[][] savedRows = new int[chunkSize][cols];
+            int[][] savedCols = new int[chunkSize][cols];
+            double[][] savedSum = new double[chunkSize][cols];
+            int savedNum = 0;
+            
+            for (row = row; row < rows; row++) {
+                for (col = 0; col < cols; col++) {
+                    //synchronized (inputFile) {
+                        centreValue = inputFile.getValue(row, col);
+                    //}
+                    if (centreValue != noData) {
+                        sum = 0;
+                        for (a = 0; a < numPixelsInFilter; a++) {
+                            x = col + dX[a];
+                            y = row + dY[a];
+                           // synchronized (inputFile) {
+                                z = inputFile.getValue(y, x);
+                            //}
+                            if (z == noData) { z = centreValue; }
+                            sum += z * weights[a];
+                        }
+                        savedRows[savedNum][col] = row;
+                        savedCols[savedNum][col] = col;
+                        savedSum[savedNum][col] = sum;
+
+                    } else {
+                       savedRows[savedNum][col] = row;
+                       savedCols[savedNum][col] = col;
+                       savedSum[savedNum][col] = noData;
+                    }
+
+                }
+                if (cancelOp) {
+                    cancelOperation();
+                    return;
+                }
+                
+                
+                savedNum +=1;
+                
+                //Write chunks of rows at one to reduce lock contetention
+                if(savedNum == chunkSize || row == rows-1){
+                    synchronized (outputFile) {
+                        for(i = 0; i < savedNum; i++){
+                            for(j = 0; j < cols; j++){
+                                outputFile.setValue(savedRows[i][j], savedCols[i][j], savedSum[i][j]);
+                            }
+                        }
+                        completedRows += savedNum;
+                        progress = (float) (100f * completedRows / (totalRows - 1));
+                        updateProgress((int) progress);
+                        
+                    }
+                    savedNum = 0;
+                }
+            }            
+        }
+    }
+    
     @Override
+    @SuppressWarnings("empty-statement")
     public void run() {
         amIActive = true;
         
         String inputHeader = null;
         String outputHeader = null;
-        int row, col, x, y;
-        double z;
-        float progress = 0;
-        int a;
-        double sum;
+        int row;
         int[] dX;
         int[] dY;
         double[] weights;
         int numPixelsInFilter;
         boolean reflectAtBorders = true;
-        double centreValue;
         String direction = "n";
+        
+        //Create thread pool
+        int threads = Runtime.getRuntime().availableProcessors();
+        System.out.println("Number of threads: " + threads);
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
     
+        long start = System.nanoTime();
+        
         if (args.length <= 0) {
             showFeedback("Plugin parameters have not been set.");
             return;
@@ -192,12 +298,13 @@ public class FilterEmboss implements WhiteboxPlugin {
         }
 
         try {
-            WhiteboxRaster inputFile = new WhiteboxRaster(inputHeader, "r");
-            inputFile.isReflectedAtEdges = reflectAtBorders;
+            WhiteboxRaster[] inputFile = new WhiteboxRaster[threads];
+            inputFile[0] = new WhiteboxRaster(inputHeader, "r");
+            inputFile[0].isReflectedAtEdges = reflectAtBorders;
 
-            int rows = inputFile.getNumberRows();
-            int cols = inputFile.getNumberColumns();
-            double noData = inputFile.getNoDataValue();
+            int rows = inputFile[0].getNumberRows();
+            int cols = inputFile[0].getNumberColumns();
+            double noData = inputFile[0].getNoDataValue();
 
             WhiteboxRaster outputFile = new WhiteboxRaster(outputHeader, "rw", inputHeader, WhiteboxRaster.DataType.FLOAT, noData);
             outputFile.setPreferredPalette("grey.pal");
@@ -225,40 +332,35 @@ public class FilterEmboss implements WhiteboxPlugin {
             
             numPixelsInFilter = dX.length;
             
-            for (row = 0; row < rows; row++) {
-                for (col = 0; col < cols; col++) {
-                    centreValue = inputFile.getValue(row, col);
-                    if (centreValue != noData) {
-                        sum = 0;
-                        for (a = 0; a < numPixelsInFilter; a++) {
-                            x = col + dX[a];
-                            y = row + dY[a];
-                            z = inputFile.getValue(y, x);
-                            if (z == noData) { z = centreValue; }
-                            sum += z * weights[a];
-                        }
-                        outputFile.setValue(row, col, sum);
-
-                    } else {
-                        outputFile.setValue(row, col, noData);
-                    }
-
-                }
-                if (cancelOp) {
-                    cancelOperation();
-                    return;
-                }
-                progress = (float) (100f * row / (rows - 1));
-                updateProgress((int) progress);
+            //calculate how many rows each thread does (just dividing by number)
+            int rowBlockSize = rows/threads;
+            
+            //Set up variables for progress updating
+            totalRows = rows;
+            completedRows = 0;
+            
+            //Start all of the threads
+            row = 0;
+            for (int i = 0; i < threads-1; i++) {
+                pool.execute(new embossWork(row, row+rowBlockSize, cols, inputFile[i], outputFile, noData, numPixelsInFilter, dX, dY, weights));
+                row += rowBlockSize;
+                inputFile[i+1] = new WhiteboxRaster(inputHeader, "r");
             }
+            pool.execute(new embossWork(row, rows, cols, inputFile[threads-1],outputFile, noData, numPixelsInFilter, dX, dY, weights));
 
+            //Wait for the threads to finish
+            pool.shutdown();
+            while(!pool.awaitTermination(1, TimeUnit.SECONDS));
+                    
             outputFile.addMetadataEntry("Created by the "
                     + getDescriptiveName() + " tool.");
             outputFile.addMetadataEntry("Created on " + new Date());
             
-            inputFile.close();
+            //Close files
+            for (int i = 0; i < threads; i++) {
+                inputFile[i].close();
+            }
             outputFile.close();
-            
 
             // returning a header file string displays the image.
             returnData(outputHeader);
@@ -271,5 +373,11 @@ public class FilterEmboss implements WhiteboxPlugin {
             amIActive = false;
             myHost.pluginComplete();
         }
+        
+        long end = System.nanoTime();
+        System.out.println("Time Elapsed: " + (end-start)/1000000000.0);
+        
+        //Shutdown the executor service
+        pool.shutdown();
     }
 }

@@ -18,6 +18,9 @@ package plugins;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
@@ -30,7 +33,10 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
     
     private WhiteboxPluginHost myHost = null;
     private String[] args;
-    /**
+    private boolean message = true; // used to only send one cancel message in multi threaded mode
+    private int progress = 0;
+    private int maxWork = 0;  // so threads can update the progress bar
+   /**
      * Used to retrieve the plugin tool's name. This is a short, unique name containing no spaces.
      * @return String containing plugin name.
      */
@@ -138,8 +144,11 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
     }
     
     private void cancelOperation() {
-        showFeedback("Operation cancelled.");
-        updateProgress("Progress: ", 0);
+        if (message) {
+            message = false;
+            showFeedback("Operation cancelled.");
+            updateProgress("Progress: ", 0);
+        }
     }
     
     private boolean amIActive = false;
@@ -158,18 +167,18 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
         
         String inputHeader = null;
         String outputHeader = null;
-        int row, col, rows, cols, x, y;
+        int row, col, rows, cols;
         int progress = 0;
-        double z, zN, noData, outputNoData;
-        int i, n;
+        double z, noData, outputNoData;
+        int i;
         int[] dX;
         int[] dY;
         double[] filterShape;
-        double[] data;
-        double largeValue = Float.POSITIVE_INFINITY;
         int numPixelsInFilter;
-        int filterSize, midPoint, lowerQuartile;
+        int filterSize, midPoint;
         boolean performLineThinning = false;
+        
+        long start = System.nanoTime();
         
         if (args.length <= 0) {
             showFeedback("Plugin parameters have not been set.");
@@ -196,6 +205,13 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                 
                 filterSize++;
             }
+            
+            int threads = Runtime.getRuntime().availableProcessors();
+            // TODO: remove after testing is done
+            System.out.println("Number of threads" + threads);
+        
+            ExecutorService pool = Executors.newFixedThreadPool(threads);
+                       
             numPixelsInFilter = filterSize * filterSize;
             dX = new int[numPixelsInFilter];
             dY = new int[numPixelsInFilter];
@@ -207,6 +223,7 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
             //that fits in the filter box 
             double aSqr = midPoint * midPoint;
             i = 0;
+            //System.out.println("Doing loop 1");
             for (row = 0; row < filterSize; row++) {
                 for (col = 0; col < filterSize; col++) {
                     dX[i] = col - midPoint;
@@ -220,60 +237,41 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                     i++;
                 }
             }
-
-            
+            //System.out.println("Done loop 1");            
             WhiteboxRaster DEM = new WhiteboxRaster(inputHeader, "r");
             
             rows = DEM.getNumberRows();
             cols = DEM.getNumberColumns();
             noData = DEM.getNoDataValue();
             outputNoData = -32768;
-                    
+            //System.out.println("Num rows: " + rows);   
             WhiteboxRaster output = new WhiteboxRaster(outputHeader, "rw", 
                     inputHeader, WhiteboxRaster.DataType.INTEGER, 0);
             output.setNoDataValue(outputNoData);
             output.setPreferredPalette("qual.pal");
             output.setDataScale(WhiteboxRaster.DataScale.CATEGORICAL);
             output.setZUnits("dimensionless");
-            
-            for (row = 0; row < rows; row++) {
-                for (col = 0; col < cols; col++) {
-                    z = DEM.getValue(row, col);
-                    if (z != noData) {
-                        data = new double[numPixelsInFilter];
-                        n = 0;
-                        for (i = 0; i < numPixelsInFilter; i++) {
-                            x = col + dX[i];
-                            y = row + dY[i];
-                            zN = DEM.getValue(y, x);
-                            if (zN != noData) {
-                                data[i] = zN;
-                                n++;
-                            } else {
-                                data[i] = largeValue;
-                            }
-                        }
-                        if (n > 0) {
-                            // sort the array
-                            Arrays.sort(data);
-                            lowerQuartile = n / 4;
-                            if (z <= data[lowerQuartile]) {
-                                output.setValue(row, col, 1);
-                            }
-                        }
-                        
-                    } else {
-                        output.setValue(row, col, outputNoData);
-                    }
+            maxWork = rows;
+            int numRows = rows / threads;
+            //System.out.println( "Rows per thread" + numRows );
+            int k = 0;
+            //System.out.println("Doing loop 2");
+            for ( k = 0; k < threads; k++) {
+                
+                int extraRows = 0;
+                //System.out.println( "Rows " + rows + "row " + row);
+                if ( ( k + 1 ) == threads ) {
+                    extraRows = rows % threads;
+                    //System.out.println( "Last thread gets this many rows: " + ( numRows + extraRows ) );
                 }
-                if (cancelOp) {
-                    cancelOperation();
-                    return;
-                }
-                progress = (int) (100f * row / (rows - 1));
-                updateProgress(progress);
+                
+                pool.execute(new LowerQuartileWork(inputHeader, output, (numRows + extraRows), ( numRows * k ), cols, dX, dY, numPixelsInFilter));
+                
             }
             
+            pool.shutdown();
+            while(!pool.awaitTermination(1, TimeUnit.SECONDS)) { };
+            //System.out.println("Done loop 2");  
             if (performLineThinning) {
                 long counter = 0;
                 int loopNum = 0;
@@ -291,10 +289,11 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
 
                 double[] neighbours = new double[8];
                 boolean patternMatch = false;
-
+               
+                //System.out.println("Starting loop 3");  
                 do {
                     loopNum++;
-                    updateProgress("Loop Number " + loopNum + ":", 0);
+                    //updateProgress("Loop Number " + loopNum + ":", 0);
                     counter = 0;
                     for (row = 0; row < rows; row++) {
                         for (col = 0; col < cols; col++) {
@@ -333,7 +332,7 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                 } while (counter > 0);
 
             }
-
+            //System.out.println("Done loop 3");  
             output.addMetadataEntry("Created by the "
                     + getDescriptiveName() + " tool.");
             output.addMetadataEntry("Created on " + new Date());
@@ -352,5 +351,120 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
             amIActive = false;
             myHost.pluginComplete();
         }
+    
+        long end = System.nanoTime();
+        System.out.println( "Time Elapsed: " + (end - start)/1000000000.0 );
+    
     }
+
+
+    private class LowerQuartileWork implements Runnable {
+        
+        private WhiteboxRaster output;
+        private String inputHeader;
+        private int rows, cols, startRow;
+        private int numPixelsInFilter;
+        private int dX[], dY[];
+                
+        public LowerQuartileWork(String inputHeader, WhiteboxRaster output, int rows, int startRow, 
+                int cols, int dX[], int dY[], int numPixelsInFilter) {
+            this.inputHeader = inputHeader;
+            this.output = output;
+            this.rows = rows;
+            this.cols = cols;
+            this.startRow = startRow;
+            this.dX = dX;
+            this.dY = dY;
+            this.numPixelsInFilter = numPixelsInFilter;
+        }
+        
+        @Override
+        public void run() {
+        
+            //System.out.println("Start Row: " + startRow + " num rows to do: " + rows );
+            int x, y;
+            double zN, z;
+            int n;
+            int i;
+            double noData;
+            double[] data;
+            double largeValue = Float.POSITIVE_INFINITY;
+            int lowerQuartile;
+            double outputNoData = -32768; // TODO: make this with const
+            int col;
+                        
+            int rowOuts[] = new int[cols];
+            int colOuts[] = new int[cols];
+            double valueOuts[] = new double[cols];
+            
+            WhiteboxRaster DEM = new WhiteboxRaster(inputHeader, "r");
+            
+            noData = DEM.getNoDataValue();
+            int row;
+            int endRow = rows + startRow;
+            for ( row = startRow; row < endRow; row ++ ) {
+                //System.out.println(row);
+                for (col = 0; col < cols; col++) {
+                    
+                    z = DEM.getValue(row, col);
+                    
+                    if (z != noData) {
+                        data = new double[numPixelsInFilter];
+                        n = 0;
+                        for (i = 0; i < numPixelsInFilter; i++) {
+                            x = col + dX[i];
+                            y = row + dY[i];
+                            
+                            zN = DEM.getValue(y, x);
+                            
+                            if (zN != noData) {
+                                data[i] = zN;
+                                n++;
+                            } else {
+                                data[i] = largeValue;
+                            }
+                        }
+                        if (n > 0) {
+                            // sort the array
+                            Arrays.sort(data);
+                            lowerQuartile = n / 4;
+                            if (z <= data[lowerQuartile]) {
+                                rowOuts[col] = row;
+                                colOuts[col] = col;
+                                valueOuts[col] = 1;
+                            }
+                        }
+
+                    } else {
+                        rowOuts[col] = row;
+                        colOuts[col] = col;
+                        valueOuts[col] = outputNoData;
+                    }
+                    
+                    
+                   
+                }
+                
+                synchronized(output) {
+                    for ( int j= 0; j < cols; j++ ) {
+                        output.setValue(rowOuts[j], colOuts[j], valueOuts[j]);
+                    }                
+                
+                }
+                
+ 
+                if (cancelOp) {
+                    cancelOperation();
+                    return;
+                }
+                
+                progress++;
+                updateProgress((progress*100)/maxWork);
+                
+            }
+            
+        }
+                
+    }
+
 }

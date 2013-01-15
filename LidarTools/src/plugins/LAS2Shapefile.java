@@ -23,6 +23,9 @@ import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.shapefile.DBF.DBFField;
 import whitebox.geospatialfiles.shapefile.DBF.DBFWriter;
 import whitebox.geospatialfiles.shapefile.ShapeType;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
 
@@ -35,6 +38,9 @@ public class LAS2Shapefile implements WhiteboxPlugin {
 
     private WhiteboxPluginHost myHost = null;
     private String[] args;
+    private long progress = 0;
+    private long maxWork = 0;
+    private boolean message = true;
     
     /**
      * Used to retrieve the plugin tool's name. This is a short, unique name
@@ -170,8 +176,11 @@ public class LAS2Shapefile implements WhiteboxPlugin {
     }
 
     private void cancelOperation() {
-        showFeedback("Operation cancelled.");
-        updateProgress("Progress: ", 0);
+        if (message){
+            message = false;
+            showFeedback("Operation cancelled.");
+            updateProgress("Progress: ", 0);
+        }
     }
     private boolean amIActive = false;
 
@@ -192,14 +201,7 @@ public class LAS2Shapefile implements WhiteboxPlugin {
 
         String inputFilesString = null;
         String[] pointFiles;
-        double x, y;
-        double z;
-        int intensity;
-        byte classValue, numReturns, returnNum;
-        int a, n;
-        int progress = 0;
-        int numPoints = 0;
-
+                
         // get the arguments
         if (args.length <= 0) {
             showFeedback("Plugin parameters have not been set.");
@@ -213,22 +215,86 @@ public class LAS2Shapefile implements WhiteboxPlugin {
             return;
         }
 
+        int threads = Runtime.getRuntime().availableProcessors();
+        // TODO: remove after testing is done
+        System.out.println("Number of threads" + threads);
+        
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        
+        
         try {
             
             pointFiles = inputFilesString.split(";");
             int numPointFiles = pointFiles.length;
-            long numPointsInFile = 0;
-             
-            PointRecord point;
-            //PointRecColours pointColours;
+
+            // this is only for the progress bar and is very wasteful
+            LASReader las;
+            for (int i = 0; i < numPointFiles; i++) {
+                las = new LASReader(pointFiles[i]);
+                maxWork += las.getNumPointRecords();
+            }
+                        
+            // add files to the thread pool
             for (int j = 0; j < numPointFiles; j++) {
-                
-                LASReader las = new LASReader(pointFiles[j]);
-                
+                pool.execute(new Las2ShapeWork(pointFiles[j]));               
+            }
+
+            pool.shutdown();
+            while(!pool.awaitTermination(1, TimeUnit.SECONDS)) { };
+                        
+            returnData(pointFiles[0].replace(".las", ".shp"));
+            
+        } catch (OutOfMemoryError oe) {
+            showFeedback("The Java Virtual Machine (JVM) is out of memory");
+        } catch (Exception e) {
+            showFeedback(e.getMessage());
+        } finally {
+            updateProgress("Progress: ", 0);
+            // tells the main application that this process is completed.
+            amIActive = false;
+            myHost.pluginComplete();
+        }
+    
+        //TODO: remove after testing is done
+        System.out.println("Done");
+        // just in case
+        pool.shutdown();
+    
+    }
+    
+    private class Las2ShapeWork implements Runnable {
+        
+        private String pointFile;
+        
+        Las2ShapeWork(String pointFile) {
+            this.pointFile = pointFile;
+        }
+        
+        
+        @Override
+        public void run() {
+            
+            // if we are already cancelled dont bother doing anything
+            if (cancelOp) { return; }
+            
+            long numPointsInFile = 0;
+            int numPoints = 0;
+            double x, y;
+            double z;
+            int intensity;
+            byte classValue, numReturns, returnNum;
+            int n;
+            
+            PointRecord point;
+            
+            try {
+            
+                LASReader las = new LASReader(pointFile);
+
                 long oneHundredthTotal = las.getNumPointRecords() / 100;
 
                 // create the new shapefile
-                String outputFile = pointFiles[j].replace(".las", ".shp");
+                String outputFile = pointFile.replace(".las", ".shp");
                 File file = new File(outputFile);
                 if (file.exists()) {
                     file.delete();
@@ -250,48 +316,46 @@ public class LAS2Shapefile implements WhiteboxPlugin {
                 fields[1].setDataType(DBFField.FIELD_TYPE_N);
                 fields[1].setFieldLength(10);
                 fields[1].setDecimalCount(3);
-                
+
                 fields[2] = new DBFField();
                 fields[2].setName("I");
                 fields[2].setDataType(DBFField.FIELD_TYPE_N);
                 fields[2].setFieldLength(8);
                 fields[2].setDecimalCount(0);
-                
+
                 fields[3] = new DBFField();
                 fields[3].setName("CLASS");
                 fields[3].setDataType(DBFField.FIELD_TYPE_N);
                 fields[3].setFieldLength(4);
                 fields[3].setDecimalCount(0);
-                
+
                 fields[4] = new DBFField();
                 fields[4].setName("RTN_NUM");
                 fields[4].setDataType(DBFField.FIELD_TYPE_N);
                 fields[4].setFieldLength(4);
                 fields[4].setDecimalCount(0);
-                
+
                 fields[5] = new DBFField();
                 fields[5].setName("NUM_RTNS");
                 fields[5].setDataType(DBFField.FIELD_TYPE_N);
                 fields[5].setFieldLength(4);
                 fields[5].setDecimalCount(0);
-                
+
                 String DBFName = output.getDatabaseFile();
                 DBFWriter writer = new DBFWriter(new File(DBFName)); /*
                  * this DBFWriter object is now in Syc Mode
                  */
 
                 writer.setFields(fields);
-                
-                
-                progress = (int)((j + 1) * 100d / numPointFiles);
-                updateProgress("Loop " + (j + 1) + " of " + numPointFiles + ":", progress);
-                
+
                 numPointsInFile = las.getNumPointRecords();
                 // first count how many valid points there are.
                 numPoints = 0;
                 n = 0;
-                progress = 0;
-                for (a = 0; a < numPointsInFile; a++) {
+                //progress = 0;
+                System.out.println("Running a new file wtih " + numPointsInFile + " points");
+                int lastA = 0;
+                for (int a = 0; a < numPointsInFile; a++) {
                     point = las.getPointRecord(a);
                     if (!point.isPointWithheld()) {
                         x = point.getX();
@@ -301,10 +365,11 @@ public class LAS2Shapefile implements WhiteboxPlugin {
                         classValue = point.getClassification();
                         returnNum = point.getReturnNumber();
                         numReturns = point.getNumberOfReturns();
-                        
+
                         whitebox.geospatialfiles.shapefile.Point wbGeometry = new whitebox.geospatialfiles.shapefile.Point(x, y);
                         output.addRecord(wbGeometry);
-                        
+
+                        // throwing all these objects on the heap is probably very slow, but using primitives breaks the code..
                         Object rowData[] = new Object[6];
                         rowData[0] = new Double(numPoints + 1);
                         rowData[1] = new Double(z);
@@ -313,7 +378,7 @@ public class LAS2Shapefile implements WhiteboxPlugin {
                         rowData[4] = new Double(returnNum);
                         rowData[5] = new Double(numReturns);
                         writer.addRecord(rowData);
-                        
+
                         numPoints++;
                     }
                     n++;
@@ -323,30 +388,22 @@ public class LAS2Shapefile implements WhiteboxPlugin {
                             cancelOperation();
                             return;
                         }
-                        progress++;
-                        updateProgress("Loop " + (j + 1) + " of " + numPointFiles + ":", progress);
+                        progress += (a - lastA);
+                        lastA = a;
+                        updateProgress("Converting file(s):", (int)((progress*100)/maxWork));
                     }
                 }
-                
+
                 output.write();
                 writer.write();
-                
-            }
-
-            returnData(pointFiles[0].replace(".las", ".shp"));
             
-        } catch (OutOfMemoryError oe) {
-            showFeedback("The Java Virtual Machine (JVM) is out of memory");
-        } catch (Exception e) {
-            showFeedback(e.getMessage());
-        } finally {
-            updateProgress("Progress: ", 0);
-            // tells the main application that this process is completed.
-            amIActive = false;
-            myHost.pluginComplete();
+            } catch (Exception e) {
+                showFeedback(e.getMessage());
+            } 
         }
+                
     }
-      
+    
 //    // this is only used for debugging the tool
 //    public static void main(String[] args) {
 //        LAS2Shapefile L2S = new LAS2Shapefile();

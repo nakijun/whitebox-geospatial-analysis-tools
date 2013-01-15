@@ -20,6 +20,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.LASReader;
 import whitebox.geospatialfiles.LASReader.PointRecord;
 import whitebox.interfaces.WhiteboxPlugin;
@@ -34,6 +38,9 @@ public class LAS2ASCII implements WhiteboxPlugin {
 
     private WhiteboxPluginHost myHost = null;
     private String[] args;
+    private long progress = 0;
+    private long maxWork = 0;
+    private boolean message = true;
     
     /**
      * Used to retrieve the plugin tool's name. This is a short, unique name
@@ -169,8 +176,12 @@ public class LAS2ASCII implements WhiteboxPlugin {
     }
 
     private void cancelOperation() {
-        showFeedback("Operation cancelled.");
-        updateProgress("Progress: ", 0);
+        
+        if (message) {
+            message = false;
+            showFeedback("Operation cancelled.");
+            updateProgress("Progress: ", 0);
+        }
     }
     private boolean amIActive = false;
 
@@ -184,28 +195,62 @@ public class LAS2ASCII implements WhiteboxPlugin {
     public boolean isActive() {
         return amIActive;
     }
+    
+    private ArrayList<String> sortFiles(String[] pointFiles, long numOfPointFiles){
+        ArrayList<String> sortedNames  = new ArrayList<String>();
+        ArrayList<Long> sortedSizes  = new ArrayList<Long>();
+        long currentSize = 0;
+        int j,i;
+        
+        LASReader las;  
+        for (i = 0; i < numOfPointFiles; i++) {
+            
+            las = new LASReader(pointFiles[i]);
+            currentSize = las.getNumPointRecords();
+            maxWork += currentSize;
+            
+            for(j = 0; j < i; j++){
+                if(currentSize >= sortedSizes.get(j)){
+                    sortedNames.add(j, pointFiles[i]);
+                    sortedSizes.add(j, currentSize);
+                    break;
+                }
+            }
+            
+            //We didn't place it yet
+            if (j == i){
+                sortedNames.add(pointFiles[i]);
+                sortedSizes.add(currentSize);
+            }
+            
+            //System.out.println(sortedNames.get(j));
+        }
+        
+        return sortedNames;
+    }
 
     @Override
+    @SuppressWarnings("empty-statement")
     public void run() {
         amIActive = true;
 
-        String inputFilesString = null;
+        String inputFilesString;
         String[] pointFiles;
-        double x, y;
-        double z;
-        int intensity;
-        byte classValue, numReturns, returnNum;
-        int a, n;
-        int progress;
-        int numPoints;
-        FileWriter fw = null;
-        BufferedWriter bw = null;
-        PrintWriter out = null;        
+        
+        long start = System.nanoTime();
+        
         // get the arguments
         if (args.length <= 0) {
             showFeedback("Plugin parameters have not been set.");
             return;
         }
+        
+        int threads = Runtime.getRuntime().availableProcessors();
+        // TODO: remove after testing is done
+        System.out.println("Number of threads" + threads);
+        
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+                
         inputFilesString = args[0];
         
         // check to see that the inputHeader and outputHeader are not null.
@@ -218,18 +263,76 @@ public class LAS2ASCII implements WhiteboxPlugin {
             
             pointFiles = inputFilesString.split(";");
             int numPointFiles = pointFiles.length;
-            long numPointsInFile = 0;
-             
-            PointRecord point;
+            
+            // Sort the file sizes to run the largest of them all first
+            ArrayList<String> sortedNames;    
+            sortedNames = sortFiles(pointFiles, numPointFiles);
+                       
             //PointRecColours pointColours;
             for (int j = 0; j < numPointFiles; j++) {
+                pool.execute(new Las2AsciiWork(sortedNames.get(j)));               
+            }
+        
+            pool.shutdown();
+            while(!pool.awaitTermination(1, TimeUnit.SECONDS)) { };
+            
+        } catch (OutOfMemoryError oe) {
+            showFeedback("The Java Virtual Machine (JVM) is out of memory");
+        } catch (Exception e) {
+            showFeedback(e.getMessage());
+        } finally {
+            updateProgress("Progress: ", 0);
+            // tells the main application that this process is completed.
+            amIActive = false;
+            myHost.pluginComplete();
+            
+        }
+    
+        //TODO: remove after testing is done
+        System.out.println("Done");
+        // just in case
+        pool.shutdown();
+        
+        long end = System.nanoTime();
+        System.out.println( "Time Elapsed: " + (end - start)/1000000000.0 );
+    }
+    
+    
+    private class Las2AsciiWork implements Runnable {
+        
+        private String pointFile;
+        //int progress;
+        
+        public Las2AsciiWork(String pointFile) {
+            this.pointFile = pointFile;
+        }
                 
-                LASReader las = new LASReader(pointFiles[j]);
-                
+        @Override
+        public void run() {
+        
+            // if we are already cancelled dont bother doing anything
+            if (cancelOp) { return; }
+                       
+            int intensity;
+            double x, y;
+            double z;
+            byte classValue, numReturns, returnNum;
+            int a, n;
+            PointRecord point;
+            long numPointsInFile = 0;
+            
+            FileWriter fw = null;
+            BufferedWriter bw = null;
+            PrintWriter out = null;
+                        
+            try {
+            
+                LASReader las = new LASReader(pointFile);
+
                 long oneHundredthTotal = las.getNumPointRecords() / 100;
 
                 // create the new text file
-                File file = new File(pointFiles[j].replace(".las", ".txt"));
+                File file = new File(pointFile.replace(".las", ".txt"));
                 if (file.exists()) {
                     file.delete();
                 }
@@ -237,15 +340,15 @@ public class LAS2ASCII implements WhiteboxPlugin {
                 fw = new FileWriter(file, false);
                 bw = new BufferedWriter(fw);
                 out = new PrintWriter(bw, true);
-            
-                progress = (int)((j + 1) * 100d / numPointFiles);
-                updateProgress("Loop " + (j + 1) + " of " + numPointFiles + ":", progress);
-                
-                numPointsInFile = las.getNumPointRecords();
+
                 // first count how many valid points there are.
-                numPoints = 0;
+                numPointsInFile = las.getNumPointRecords();
+
+                // TODO: remove when testing is done
+                System.out.println("Num points in file: " + numPointsInFile);
+
                 n = 0;
-                progress = 0;
+                int lastA = 0;
                 for (a = 0; a < numPointsInFile; a++) {
                     point = las.getPointRecord(a);
                     if (!point.isPointWithheld()) {
@@ -258,7 +361,6 @@ public class LAS2ASCII implements WhiteboxPlugin {
                         numReturns = point.getNumberOfReturns();
                         out.println((a + 1) + " " + x + " " + y + " " + z + " " + intensity + 
                                 " " + classValue + " " + returnNum + " " + numReturns);
-                        numPoints++;
                     }
                     n++;
                     if (n >= oneHundredthTotal) {
@@ -267,31 +369,25 @@ public class LAS2ASCII implements WhiteboxPlugin {
                             cancelOperation();
                             return;
                         }
-                        progress++;
-                        updateProgress("Loop " + (j + 1) + " of " + numPointFiles + ":", progress);
+                        progress += (a - lastA);
+                        lastA = a;
+                        updateProgress("Converting file(s):", (int)((progress*100)/maxWork));
                     }
                 }
-                
+            } catch (Exception e ) {
+                showFeedback(e.getMessage());
+            } finally {
+                if (out != null || bw != null) {
+                    out.flush();
+                    out.close();
+                }              
             }
             
-        } catch (OutOfMemoryError oe) {
-            showFeedback("The Java Virtual Machine (JVM) is out of memory");
-        } catch (Exception e) {
-            showFeedback(e.getMessage());
-        } finally {
-            if (out != null || bw != null) {
-                out.flush();
-                out.close();
-            }
-            
-            updateProgress("Progress: ", 0);
-            // tells the main application that this process is completed.
-            amIActive = false;
-            myHost.pluginComplete();
             
         }
+     
     }
-      
+    
 //    // this is only used for debugging the tool
 //    public static void main(String[] args) {
 //        LAS2ASCII L2A = new LAS2ASCII();

@@ -20,8 +20,12 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.LASReader;
 import whitebox.geospatialfiles.LASReader.PointRecColours;
 import whitebox.geospatialfiles.LASReader.PointRecord;
@@ -39,6 +43,9 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
 
     private WhiteboxPluginHost myHost = null;
     private String[] args;
+    private long numPointFiles = 0; //Made to be accessable by whole class for progress bar
+    private Integer numFilesCompleted = 0;
+    private boolean message = true;
     
     /**
      * Used to retrieve the plugin tool's name. This is a short, unique name
@@ -117,6 +124,7 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
      * @return Object, such as an output WhiteboxRaster.
      */
     private void returnData(Object ret) {
+        //Updates the progress bar
         if (myHost != null) {
             myHost.returnData(ret);
         }
@@ -175,9 +183,13 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
     }
 
     private void cancelOperation() {
-        showFeedback("Operation cancelled.");
-        updateProgress("Progress: ", 0);
+        if (message) {
+            message = false;
+            showFeedback("Operation cancelled.");
+            updateProgress("Progress: ", 0);
+        }
     }
+    
     private boolean amIActive = false;
 
     /**
@@ -190,74 +202,58 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
     public boolean isActive() {
         return amIActive;
     }
+    
+    private ArrayList<String> sortFiles(String[] pointFiles, long numOfPointFiles){
+        ArrayList<String> sortedNames  = new ArrayList<String>();
+        ArrayList<Long> sortedSizes  = new ArrayList<Long>();
+        long currentSize = 0;
+        int j,i;
+        
+        LASReader las;  
+        for (i = 0; i < numOfPointFiles; i++) {
+            
+            las = new LASReader(pointFiles[i]);
+            currentSize = las.getNumPointRecords();   
+            
+            for(j = 0; j < i; j++){
+                if(currentSize >= sortedSizes.get(j)){
+                    sortedNames.add(j, pointFiles[i]);
+                    sortedSizes.add(j, currentSize);
+                    break;
+                }
+            }
+            
+            //We didn't place it yet
+            if (j == i){
+                sortedNames.add(pointFiles[i]);
+                sortedSizes.add(currentSize);
+            }
+        }
+        
+        return sortedNames;
+    }
 
     @Override
+    @SuppressWarnings("empty-statement")
     public void run() {
         amIActive = true;
 
-        String inputFilesString = null;
+        String inputFilesString;
         String[] pointFiles;
-        String outputHeader = null;
-        int row, col;
-        int nrows, ncols;
-        double x, y;
-        double z = 0;
-        int a, i;
-        int progress = 0;
-        int numPoints = 0;
-        double maxValue;
-        double minX = Double.POSITIVE_INFINITY;
-        double maxX = Double.NEGATIVE_INFINITY;
-        double minY = Double.POSITIVE_INFINITY;
-        double maxY = Double.NEGATIVE_INFINITY;
-        double north, south, east, west;
-        double resolution = 1;
-        String str1 = null;
-        FileWriter fw = null;
-        BufferedWriter bw = null;
-        PrintWriter out = null;
-        List<KdTree.Entry<Double>> results;
-        double noData = -32768;
-        double northing, easting;
-        String whatToInterpolate = "";
-        String returnNumberToInterpolate = "all points";
-        String suffix = "";
-        boolean excludeNeverClassified = false;
-        boolean excludeUnclassified = false;
-        boolean excludeBareGround = false;
-        boolean excludeLowVegetation = false;
-        boolean excludeMediumVegetation = false;
-        boolean excludeHighVegetation = false;
-        boolean excludeBuilding = false;
-        boolean excludeLowPoint = false;
-        //boolean excludeHighPoint = false;
-        boolean excludeModelKeyPoint = false;
-        boolean excludeWater = false;
-            
+        
+        long start = System.nanoTime();
+                
         // get the arguments
         if (args.length <= 0) {
             showFeedback("Plugin parameters have not been set.");
             return;
         }
+        
+        int threads = Runtime.getRuntime().availableProcessors();
+        System.out.println("Number of threads: " + threads);
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+                
         inputFilesString = args[0];
-        suffix = " " + args[1].trim();
-        whatToInterpolate = args[2].toLowerCase();
-        returnNumberToInterpolate = args[3].toLowerCase();
-        resolution = Double.parseDouble(args[4]);
-        double circleCircumscrbingGridCell = Math.sqrt(2) * resolution;
-        excludeNeverClassified = Boolean.parseBoolean(args[5]);
-        excludeUnclassified = Boolean.parseBoolean(args[6]);
-        excludeBareGround = Boolean.parseBoolean(args[7]);
-        excludeLowVegetation = Boolean.parseBoolean(args[8]);
-        excludeMediumVegetation = Boolean.parseBoolean(args[9]);
-        excludeHighVegetation = Boolean.parseBoolean(args[10]);
-        excludeBuilding = Boolean.parseBoolean(args[11]);
-        excludeLowPoint = Boolean.parseBoolean(args[12]);
-        //excludeHighPoint = Boolean.parseBoolean(args[14]);
-        excludeModelKeyPoint = Boolean.parseBoolean(args[13]);
-        excludeWater = Boolean.parseBoolean(args[14]);
-        
-        
         
         // check to see that the inputHeader and outputHeader are not null.
         if ((inputFilesString.length() <= 0)) {
@@ -266,9 +262,119 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
         }
 
         try {
+            pointFiles = inputFilesString.split(";");
+            numPointFiles = pointFiles.length;
             
+            // Sort the file sizes to run the largest of them all first
+            ArrayList<String> sortedNames = sortFiles(pointFiles, numPointFiles);
+
+            for (int j = 0; j < numPointFiles; j++) {
+                if(j == 0){
+                    pool.execute(new liDARMaxInterWork(sortedNames.get(j), true));
+                }
+                else{
+                    pool.execute(new liDARMaxInterWork(sortedNames.get(j), false));
+                }
+            }
+        
+            pool.shutdown();
+            while(!pool.awaitTermination(1, TimeUnit.SECONDS)) { };
+            
+        } catch (OutOfMemoryError oe) {
+            showFeedback("The Java Virtual Machine (JVM) is out of memory");
+        } catch (Exception e) {
+            showFeedback(e.getMessage());
+        } finally {
+            updateProgress("Progress: ", 0);
+            // tells the main application that this process is completed.
+            amIActive = false;
+            myHost.pluginComplete();
+            
+        }
+        
+        long end = System.nanoTime();
+        System.out.println("Time Elapsed: " + (end-start)/1000000000.0);
+    
+        // just in case
+        pool.shutdown();
+    }
+    
+    private class liDARMaxInterWork implements Runnable {
+        
+        private String pointFile;
+        boolean shouldDisplay;
+        
+        public liDARMaxInterWork(String pointFile, boolean shouldDisplay) {
+            this.pointFile = pointFile;
+            this.shouldDisplay = shouldDisplay;
+        }
+        
+        @Override
+        public void run() {
+            
+            String outputHeader = null;
+            int row, col;
+            int nrows, ncols;
+            double x, y;
+            double z = 0;
+            int a, i;
+            int progress = 0;
+            int numPoints = 0;
+            double maxValue;
+            double minX = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY;
+            double minY = Double.POSITIVE_INFINITY;
+            double maxY = Double.NEGATIVE_INFINITY;
+            double north, south, east, west;
+            double resolution = 1;
+            String str1 = null;
+            FileWriter fw = null;
+            BufferedWriter bw = null;
+            PrintWriter out = null;
+            List<KdTree.Entry<Double>> results;
+            double noData = -32768;
+            double northing, easting;
+            String whatToInterpolate = "";
+            String returnNumberToInterpolate = "all points";
+            String suffix = "";
+            boolean excludeNeverClassified = false;
+            boolean excludeUnclassified = false;
+            boolean excludeBareGround = false;
+            boolean excludeLowVegetation = false;
+            boolean excludeMediumVegetation = false;
+            boolean excludeHighVegetation = false;
+            boolean excludeBuilding = false;
+            boolean excludeLowPoint = false;
+            //boolean excludeHighPoint = false;
+            boolean excludeModelKeyPoint = false;
+            boolean excludeWater = false;
+
+            // get the arguments
+            if (args.length <= 0) {
+                showFeedback("Plugin parameters have not been set.");
+                return;
+            }
+            suffix = " " + args[1].trim();
+            whatToInterpolate = args[2].toLowerCase();
+            returnNumberToInterpolate = args[3].toLowerCase();
+            resolution = Double.parseDouble(args[4]);
+            double circleCircumscrbingGridCell = Math.sqrt(2) * resolution;
+            excludeNeverClassified = Boolean.parseBoolean(args[5]);
+            excludeUnclassified = Boolean.parseBoolean(args[6]);
+            excludeBareGround = Boolean.parseBoolean(args[7]);
+            excludeLowVegetation = Boolean.parseBoolean(args[8]);
+            excludeMediumVegetation = Boolean.parseBoolean(args[9]);
+            excludeHighVegetation = Boolean.parseBoolean(args[10]);
+            excludeBuilding = Boolean.parseBoolean(args[11]);
+            excludeLowPoint = Boolean.parseBoolean(args[12]);
+            //excludeHighPoint = Boolean.parseBoolean(args[14]);
+            excludeModelKeyPoint = Boolean.parseBoolean(args[13]);
+            excludeWater = Boolean.parseBoolean(args[14]);
+            
+            long numPointsInFile = 0;
+
             boolean[] classValuesToExclude = new boolean[32]; // there can be up to 32 different classes in future versions
-            
+
             if (excludeNeverClassified) { classValuesToExclude[0] = true; }
             if (excludeUnclassified) { classValuesToExclude[1] = true; }
             if (excludeBareGround) { classValuesToExclude[2] = true; }
@@ -279,21 +385,16 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
             if (excludeLowPoint) { classValuesToExclude[7] = true; }
             if (excludeModelKeyPoint) { classValuesToExclude[8] = true; }
             if (excludeWater) { classValuesToExclude[9] = true; }
-            
-            pointFiles = inputFilesString.split(";");
-            int numPointFiles = pointFiles.length;
-            long numPointsInFile = 0;
-                
+
             PointRecord point;
             PointRecColours pointColours;
             double[] entry;
-            for (int j = 0; j < numPointFiles; j++) {
+
+            try{
+                LASReader las = new LASReader(pointFile);
                 
-                LASReader las = new LASReader(pointFiles[j]);
-                
-                progress = (int)((j + 1) * 100d / numPointFiles);
-                updateProgress("Loop " + (j + 1) + " of " + numPointFiles + " Reading point data:", progress);
-                
+                long oneHundredthTotal = las.getNumPointRecords() / 100; //For progress
+
                 numPointsInFile = las.getNumPointRecords();
                 // first count how many valid points there are.
                 numPoints = 0;
@@ -318,17 +419,17 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                         }
                     }
                 }
-                
+
                 // now read the valid points into the k-dimensional tree.
-                
+
                 minX = Double.POSITIVE_INFINITY;
                 maxX = Double.NEGATIVE_INFINITY;
                 minY = Double.POSITIVE_INFINITY;
                 maxY = Double.NEGATIVE_INFINITY;
-        
+
                 KdTree<Double> pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer(numPoints));
-            
-                
+
+
                 // read the points in
                 if (returnNumberToInterpolate.equals("all points")) {
                     for (a = 0; a < numPointsInFile; a++) {
@@ -351,7 +452,7 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                                         << 16) | (pointColours.getGreen() << 8) | 
                                         pointColours.getRed());
                             }
-                            
+
                             entry = new double[]{y, x};
                             pointsTree.addPoint(entry, z);
 
@@ -367,10 +468,6 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                             if (y > maxY) {
                                 maxY = y;
                             }
-                        }
-                        progress = (int) (100d * (a + 1) / numPointsInFile);
-                        if ((progress % 2) == 0) {
-                            updateProgress("Reading point data:", progress);
                         }
                     }
                 } else if (returnNumberToInterpolate.equals("first return")) {
@@ -395,7 +492,7 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                                         << 16) | (pointColours.getGreen() << 8) | 
                                         pointColours.getRed());
                             }
-                            
+
                             entry = new double[]{y, x};
                             pointsTree.addPoint(entry, z);
 
@@ -411,10 +508,6 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                             if (y > maxY) {
                                 maxY = y;
                             }
-                        }
-                        progress = (int) (100d * (a + 1) / numPointsInFile);
-                        if ((progress % 2) == 0) {
-                            updateProgress("Reading point data:", progress);
                         }
                     }
                 } else { // if (returnNumberToInterpolate.equals("last return")) {
@@ -439,7 +532,7 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                                         << 16) | (pointColours.getGreen() << 8) | 
                                         pointColours.getRed());
                             }
-                            
+
                             entry = new double[]{y, x};
                             pointsTree.addPoint(entry, z);
 
@@ -456,21 +549,17 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                                 maxY = y;
                             }
                         }
-                        progress = (int) (100d * (a + 1) / numPointsInFile);
-                        if ((progress % 2) == 0) {
-                            updateProgress("Reading point data:", progress);
-                        }
                     }
                 }
-                
-                outputHeader = pointFiles[j].replace(".las", suffix + ".dep");
-                
+
+                outputHeader = pointFile.replace(".las", suffix + ".dep");
+
                 // see if the output files already exist, and if so, delete them.
                 if ((new File(outputHeader)).exists()) {
                     (new File(outputHeader)).delete();
                     (new File(outputHeader.replace(".dep", ".tas"))).delete();
                 }
-            
+
                 // What are north, south, east, and west and how many rows and 
                 // columns should there be?
                 west = minX - 0.5 * resolution;
@@ -479,7 +568,7 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                 ncols = (int)(Math.ceil((maxX - west) / resolution));
                 south = north - nrows * resolution;
                 east = west + ncols * resolution;
-            
+
                 // create the whitebox header file.
                 fw = new FileWriter(outputHeader, false);
                 bw = new BufferedWriter(fw);
@@ -559,28 +648,34 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                         cancelOperation();
                         return;
                     }
-                    progress = (int) (100f * row / (nrows - 1));
-                    updateProgress("Interpolating point data:", progress);
+
                 }
 
                 image.addMetadataEntry("Created by the "
                         + getDescriptiveName() + " tool.");
                 image.addMetadataEntry("Created on " + new Date());
-
                 image.close();
+                
+                //Udpate the progress bar
+                synchronized(numFilesCompleted){
+                    numFilesCompleted +=1;
+                    progress = (int) (100d * numFilesCompleted / numPointFiles);
+                    updateProgress("Progress", progress);
+                }
+                
+                //Only display the last of all of the LAS file interpolations
+                if(shouldDisplay == true){
+                    returnData(pointFile.replace(".las", suffix + ".dep"));
+                }
+
+            } catch (OutOfMemoryError oe) {
+                showFeedback("The Java Virtual Machine (JVM) is out of memory");
+            } catch (Exception e) {
+                showFeedback(e.getMessage());
+            } finally {
+
             }
             
-            returnData(pointFiles[0].replace(".las", suffix + ".dep"));
-            
-        } catch (OutOfMemoryError oe) {
-            showFeedback("The Java Virtual Machine (JVM) is out of memory");
-        } catch (Exception e) {
-            showFeedback(e.getMessage());
-        } finally {
-            updateProgress("Progress: ", 0);
-            // tells the main application that this process is completed.
-            amIActive = false;
-            myHost.pluginComplete();
         }
     }
 //      
