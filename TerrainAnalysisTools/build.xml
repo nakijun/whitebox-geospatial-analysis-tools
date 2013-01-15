@@ -71,4 +71,7 @@
     nbproject/build-impl.xml file. 
 
     -->
+    <target name="-post-jar">
+        <copy file="${dist.jar}" todir="../WhiteboxGIS/resources/plugins" />
+    </target>
 </project>
