@@ -132,6 +132,13 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
     
     private PageFormat defaultPageFormat = new PageFormat();
     
+    // there can only be at most one of these created
+    TimingProfiler timingProfilerWindow = null;
+    
+    // flags for thread timing command line options
+    private boolean optTimes = false;
+    private boolean optThreads = false;
+    
     public static void main(String[] args) {
         
         //setLookAndFeel("Nimbus");
@@ -144,7 +151,7 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             System.setProperty("apple.awt.fileDialogForDirectories", "true");
         }
 
-        WhiteboxGui wb = new WhiteboxGui();
+        WhiteboxGui wb = new WhiteboxGui(args);
         wb.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         wb.setVisible(true);
     }
@@ -198,9 +205,14 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
         return name;
     }
     
-    public WhiteboxGui() {
+    public WhiteboxGui(String[] args) {
         super("Whitebox GAT v." + versionNumber);
         try {
+            // handle command line args
+            List arglist = Arrays.asList( args );
+            optThreads = arglist.contains("-threads");      // implies -times
+            optTimes = optThreads || arglist.contains("-times");
+            
             // initialize the pathSep and GraphicsDirectory variables
             pathSep = File.separator;
 
@@ -234,6 +246,12 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             }
 
             callSplashScreen();
+            
+//            if ( optTimes || optThreads ) {
+//                JOptionPane.showMessageDialog(null,
+//                        (optThreads?"Can adjust no. of threads\n":"")+(optTimes?"Will report execution times":""),
+//                        "Tool Timing Options", JOptionPane.INFORMATION_MESSAGE);
+//            }
 
             setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -316,15 +334,51 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
     @Override
     public void runPlugin(String pluginName, String[] args) {
         try {
+            // if we're timing, there shouldn't be any active plugins
+            if ( optTimes && activePlugs.size()>0 ) {
+                JOptionPane.showMessageDialog(null,
+                            "Sorry, wait until current tool has finished!",
+                            "Tool Timing in Progress", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
             WhiteboxPlugin plug = pluginService.getPlugin(pluginName, StandardPluginService.SIMPLE_NAME);
             plug.setPluginHost(this);
+            
+            // let user set no. of threads to use $$$
+            // probably want to add that as a supplemental arg?
+            
             plug.setArgs(args);
             activePlugs.add(plug);
             if (plug instanceof NotifyingThread) {
                 NotifyingThread t = (NotifyingThread) (plug);
                 t.addListener(this);
             }
-            new Thread(plug).start();
+            
+            // start timing
+            long startTime = (optTimes ? System.nanoTime() : 0);
+            
+            // keep handle on thread in case we should wait for completion
+            Thread plugthread = new Thread(plug);
+            plugthread.start();
+            
+            // report tool name, args, no. threads, execution time (sec.)
+            // oops, tool has not FINISHED by here!
+            if ( optTimes ) {
+                //plugthread.join();  //this may hang the GUI... YUP!
+                String report = String.format("Tool name: %s%n" +
+                        "Arguments: %s%n" +
+                        "No. threads: %d%n" +
+                        "Execution time (sec): %d",
+                        pluginName,
+                        Arrays.toString(args),
+                        16,
+                        System.nanoTime()-startTime);
+                        //((System.nanoTime()-startTime)/100000000)/10.0);
+                JOptionPane.showMessageDialog(null,
+                        report, "Tool Timing Report", JOptionPane.INFORMATION_MESSAGE);
+            }
+            
 
             //pool.submit(plug);
         } catch (Exception e) {
@@ -749,6 +803,7 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             modifyPixels = new JCheckBoxMenuItem("Modify Pixel Values", new ImageIcon(graphicsDirectory + "ModifyPixels.png"));
             JMenuItem paletteManager = new JMenuItem("Palette Manager", new ImageIcon(graphicsDirectory + "paletteManager.png"));
             JMenuItem refreshTools = new JMenuItem("Refresh Tool Usage");
+            JMenuItem timingProfiler = new JMenuItem("Timing Profiler", new ImageIcon(graphicsDirectory + "timer_clock.png"));
 
 
             // File menu
@@ -1019,6 +1074,12 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             newHelp.addActionListener(this);
             newHelp.setActionCommand("newHelp");
             ToolsMenu.add(newHelp);
+            
+            ToolsMenu.addSeparator();
+
+            ToolsMenu.add(timingProfiler);
+            timingProfiler.addActionListener(this);
+            timingProfiler.setActionCommand("timingProfiler");
             menubar.add(ToolsMenu);
 
             // Help menu
@@ -3925,8 +3986,11 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             fitToPage();
         } else if (actionCommand.equals("maximizeMapAreaScreenSize")) {
             maximizeMapAreaScreenSize();
+        } else if (actionCommand.equals("timingProfiler")) {
+            if ( timingProfilerWindow==null ) timingProfilerWindow = new TimingProfiler(this);
+            timingProfilerWindow.setVisible(true);
         }
-
+        
     }
 
     private void close() {

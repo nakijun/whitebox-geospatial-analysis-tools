@@ -24,6 +24,8 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
 
 /**
  *
@@ -122,6 +124,15 @@ public class Main {
             String path = System.getProperty("java.home")
                     + separator + "bin" + separator + "java";
 
+            // build list of arguments for 2nd JVM
+            ArrayList<String> arglist = new ArrayList();
+            arglist.add(path);
+            arglist.add(xmx);
+            arglist.add(xms);
+            arglist.add("-cp");
+            arglist.add(classpath);
+
+            // special case for MacOS platform
             if (System.getProperty("os.name").contains("Mac")) {
                 pathSep = File.separator;
                 applicationDirectory = java.net.URLDecoder.decode(getClass().getProtectionDomain().getCodeSource().getLocation().getPath(), "UTF-8");
@@ -143,18 +154,24 @@ public class Main {
                 if (retFile != null) {
                     icon = "-Xdock:icon=" + retFile;
                 }
-                ProcessBuilder processBuilder =
-                        new ProcessBuilder(path, xmx, xms, "-cp",
-                        classpath, icon, "-Xdock:name=Whitebox",
-                        WhiteboxGui.class.getName());
-                Process process = processBuilder.start();
-            } else {
-                ProcessBuilder processBuilder =
-                        new ProcessBuilder(path, xmx, xms, "-cp",
-                        classpath,
-                        WhiteboxGui.class.getName());
-                Process process = processBuilder.start();
+                arglist.add(icon);
+                arglist.add("-Xdock:name=Whitebox");
             }
+            
+            // add class to execute and any args supplied from the command line
+            arglist.add(WhiteboxGui.class.getName());
+            arglist.addAll( Arrays.asList(args) );
+
+            // now we can create the ProcessBuilder using the arg list
+            ProcessBuilder processBuilder = new ProcessBuilder(arglist);
+            
+            // redirect its I/O to that of this existing process, so it can contact the user
+            // (this is effective if running in NetBeans, but not in a Windows command shell)
+            processBuilder.inheritIO();
+            
+            // start the 2nd JVM, then return from the 1st one
+            Process process = processBuilder.start();
+            
             return true;
         } catch (Exception e) {
             e.printStackTrace();
