@@ -33,6 +33,7 @@ import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
 import whitebox.structures.KdTree;
+import whitebox.parallel.Parallel;
 
 /**
  * WhiteboxPlugin is used to define a plugin tool for Whitebox GIS.
@@ -247,7 +248,8 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
             return;
         }
         
-        int threads = Runtime.getRuntime().availableProcessors();
+        //int threads = Runtime.getRuntime().availableProcessors();
+        int threads = Parallel.getPluginProcessors();
         System.out.println("Number of threads: " + threads);
         ExecutorService pool = Executors.newFixedThreadPool(threads);
                 

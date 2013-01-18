@@ -20,6 +20,22 @@ public class Parallel {
 
     static int iCPU = Runtime.getRuntime().availableProcessors();
 
+    /*
+     * The get method is for plugins with adjustable parallelism to find the
+     * no. of processors that they should use at run time.
+     */
+    public static int getPluginProcessors() {
+        return iCPU;
+    }
+
+    /*
+     * The set method is for use by Timing Profiler, so it can limit the no.
+     * of processors for plugins to use for the purpose of timing tests. 
+     */
+    public static void setPluginProcessors(int iCPU) {
+        Parallel.iCPU = iCPU;
+    }
+
     /**
      * Parallel.Tasks
      */

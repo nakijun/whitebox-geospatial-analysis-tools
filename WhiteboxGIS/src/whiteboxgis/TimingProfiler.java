@@ -4,9 +4,13 @@
  */
 package whiteboxgis;
 
+import java.util.Arrays;
 import java.util.Enumeration;
 import javax.swing.AbstractButton;
+import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
+import whitebox.interfaces.WhiteboxPlugin;
+import whitebox.parallel.Parallel;
 
 /**
  *
@@ -16,7 +20,12 @@ public class TimingProfiler extends javax.swing.JFrame {
 
     // This is the no. of processors ("threads") that a tool with adjustable
     // parallelism should use.  It defaults to the max. no. available.
-    private static int useProcessors = 0;
+    private static int useProcessors = Runtime.getRuntime().availableProcessors();
+    
+    // This describes the tool currently being timed
+    WhiteboxPlugin plugin;
+    String[] pluginArgs;
+    long pluginStart;   // nanosecs
     
     /**
      * Creates TimingProfiler window
@@ -33,10 +42,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jPanel4.setVisible(true);
         this.setVisible(true);
         
-        // Find out the max. no. of "processors" (can exceed no. of cores if
-        // hyperthreading is available).
-        useProcessors = Runtime.getRuntime().availableProcessors();
-        
         // Go through the radio buttons, set as the default the one equal to
         // nprocs, and hide the remaining ones > nprocs
         // Problems:
@@ -52,36 +57,67 @@ public class TimingProfiler extends javax.swing.JFrame {
             }
             n++;
         }
+        
+        this.pack();
     }
     
     /**
-     * Queries no. of processors that use of Timing Profiler wants tools to use,
-     * for example, when a thread pool is being created.
-     * 
-     * @return No. of processors to use
-     */
-    public static int getProcessorsToUse() {
-        return useProcessors;
-    }
-    
-    /**
-     * Report the timing results from running a particular plugin with an
-     * array of arguments. The Timing Profiler will display these results,
-     * and can rerun the plugin with the same arguments, typically with a
+     * Start a record for timing a particular plugin with an array of arguments.
+     * Calling reportTiming() will cause the Timing Profiler to display the results,
+     * and it can rerun the plugin with the same arguments, typically with a
      * different no. of processors.
      * 
-     * @param pluginName Name of plugin given to WhiteboxGUI.runPlugin()
+     * @param plugin Plugin whose name was given to WhiteboxGUI.runPlugin()
      * @param args Array of arguments given to WhiteboxGUI.runPlugin()
+     */
+    public void startTiming( WhiteboxPlugin plugin, String[] args ) {
+        
+        // update no. of processors so plugin can obtain it
+        Parallel.setPluginProcessors(useProcessors);
+        
+        // remember the name and args for stopTiming() call
+        this.plugin = plugin;
+        this.pluginArgs = args;
+        this.pluginStart = System.nanoTime();
+    }
+    
+    /**
+     * Report the run time of the plugin for which startTiming() was called.
+     * 
      * @param nanosecs Wallclock execution time of plugin in nanoseconds.
      */
-    public void reportTiming( String pluginName, String[] args, long nanosecs ) {
+    public void stopTiming() {
+        
+        long execTime = System.nanoTime() - pluginStart;
+        
+        // NOTE: defer this to Java 8, when WhiteboxPlugin interface can have
+        //  a default implementation of "none".  We want the method to be in
+        //  the interface, but we don't want to force all the old serial
+        //  plugins to implement it.
+        //
+        // interrogate the plugin to find out its style of parallelism
+        // plugin.getParallelism();
+        
         // store results in textfield of [useProcessors], displaying as seconds
         
         // format results in scrollable text box
+        String report = String.format("Tool name: %s%n" +
+                    "Arguments: %s%n" +
+                    "Parallelism: %s%n" +
+                    "No. processors: %d%n" +
+                    "Execution time (sec): %.1f",
+                    plugin.getName(),
+                    Arrays.toString(pluginArgs),
+                    "(unknown)",
+                    useProcessors,
+                    (float)(execTime/100000000)/10.0);
+        JOptionPane.showMessageDialog(this, report, "Timing Report", JOptionPane.INFORMATION_MESSAGE);
     }
     
     /* button actions needing response:
-     * 
+     * - when any of the button group are clicked -> update useProcessors
+     * - Rerun tool -> call runPlugin(get name, saved args)
+     * All the others are internal to the tool.
      */
     
     /**
@@ -176,6 +212,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(5, 10, 0, 0);
         jPanel1.add(jRadioButton1, gridBagConstraints);
 
+        jTextField1.setEditable(false);
         jTextField1.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField1.setText("0.0");
         jTextField1.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -202,6 +239,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 10, 0, 0);
         jPanel1.add(jRadioButton2, gridBagConstraints);
 
+        jTextField2.setEditable(false);
         jTextField2.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField2.setText("0.0");
         jTextField2.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -228,6 +266,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 10, 0, 0);
         jPanel1.add(jRadioButton3, gridBagConstraints);
 
+        jTextField3.setEditable(false);
         jTextField3.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField3.setText("0.0");
         jTextField3.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -253,6 +292,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 10, 392, 0);
         jPanel1.add(jRadioButton4, gridBagConstraints);
 
+        jTextField4.setEditable(false);
         jTextField4.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField4.setText("0.0");
         jTextField4.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -279,6 +319,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(5, 6, 0, 0);
         jPanel1.add(jRadioButton5, gridBagConstraints);
 
+        jTextField5.setEditable(false);
         jTextField5.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField5.setText("0.0");
         jTextField5.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -305,6 +346,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 6, 0, 0);
         jPanel1.add(jRadioButton6, gridBagConstraints);
 
+        jTextField6.setEditable(false);
         jTextField6.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField6.setText("0.0");
         jTextField6.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -331,6 +373,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 6, 0, 0);
         jPanel1.add(jRadioButton7, gridBagConstraints);
 
+        jTextField7.setEditable(false);
         jTextField7.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField7.setText("0.0");
         jTextField7.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -356,6 +399,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 6, 392, 0);
         jPanel1.add(jRadioButton8, gridBagConstraints);
 
+        jTextField8.setEditable(false);
         jTextField8.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField8.setText("0.0");
         jTextField8.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -382,6 +426,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(5, 2, 0, 0);
         jPanel1.add(jRadioButton9, gridBagConstraints);
 
+        jTextField9.setEditable(false);
         jTextField9.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField9.setText("0.0");
         jTextField9.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -408,6 +453,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
         jPanel1.add(jRadioButton10, gridBagConstraints);
 
+        jTextField10.setEditable(false);
         jTextField10.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField10.setText("0.0");
         jTextField10.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -434,6 +480,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
         jPanel1.add(jRadioButton11, gridBagConstraints);
 
+        jTextField11.setEditable(false);
         jTextField11.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField11.setText("0.0");
         jTextField11.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -459,6 +506,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 2, 392, 0);
         jPanel1.add(jRadioButton12, gridBagConstraints);
 
+        jTextField12.setEditable(false);
         jTextField12.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField12.setText("0.0");
         jTextField12.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -485,6 +533,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(5, 2, 0, 0);
         jPanel1.add(jRadioButton13, gridBagConstraints);
 
+        jTextField13.setEditable(false);
         jTextField13.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField13.setText("0.0");
         jTextField13.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -511,6 +560,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
         jPanel1.add(jRadioButton14, gridBagConstraints);
 
+        jTextField14.setEditable(false);
         jTextField14.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField14.setText("0.0");
         jTextField14.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -537,6 +587,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
         jPanel1.add(jRadioButton15, gridBagConstraints);
 
+        jTextField15.setEditable(false);
         jTextField15.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField15.setText("0.0");
         jTextField15.setPreferredSize(new java.awt.Dimension(80, 20));
@@ -562,6 +613,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(3, 2, 392, 0);
         jPanel1.add(jRadioButton16, gridBagConstraints);
 
+        jTextField16.setEditable(false);
         jTextField16.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField16.setText("0.0");
         jTextField16.setPreferredSize(new java.awt.Dimension(80, 20));

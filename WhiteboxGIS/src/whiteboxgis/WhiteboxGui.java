@@ -132,7 +132,7 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
     
     private PageFormat defaultPageFormat = new PageFormat();
     
-    // there can only be at most one of these created
+    // there can only be at most one of windows these created
     TimingProfiler timingProfilerWindow = null;
     
     // flags for thread timing command line options
@@ -334,20 +334,17 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
     @Override
     public void runPlugin(String pluginName, String[] args) {
         try {
-            // if we're timing, there shouldn't be any active plugins
-            if ( optTimes && activePlugs.size()>0 ) {
+            // If Timing Profiler window exists, there shouldn't be any active plugins
+            if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable()
+                    && !activePlugs.isEmpty()) {
                 JOptionPane.showMessageDialog(null,
-                            "Sorry, wait until current tool has finished!",
+                            "Sorry, try again after current tool has finished!",
                             "Tool Timing in Progress", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             
             WhiteboxPlugin plug = pluginService.getPlugin(pluginName, StandardPluginService.SIMPLE_NAME);
             plug.setPluginHost(this);
-            
-            // let user set no. of threads to use $$$
-            // probably want to add that as a supplemental arg?
-            
             plug.setArgs(args);
             activePlugs.add(plug);
             if (plug instanceof NotifyingThread) {
@@ -355,30 +352,11 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
                 t.addListener(this);
             }
             
-            // start timing
-            long startTime = (optTimes ? System.nanoTime() : 0);
+            // tell Timing Profiler to record start time
+            if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable() )
+                timingProfilerWindow.startTiming(plug, args);
             
-            // keep handle on thread in case we should wait for completion
-            Thread plugthread = new Thread(plug);
-            plugthread.start();
-            
-            // report tool name, args, no. threads, execution time (sec.)
-            // oops, tool has not FINISHED by here!
-            if ( optTimes ) {
-                //plugthread.join();  //this may hang the GUI... YUP!
-                String report = String.format("Tool name: %s%n" +
-                        "Arguments: %s%n" +
-                        "No. threads: %d%n" +
-                        "Execution time (sec): %d",
-                        pluginName,
-                        Arrays.toString(args),
-                        16,
-                        System.nanoTime()-startTime);
-                        //((System.nanoTime()-startTime)/100000000)/10.0);
-                JOptionPane.showMessageDialog(null,
-                        report, "Tool Timing Report", JOptionPane.INFORMATION_MESSAGE);
-            }
-            
+            new Thread(plug).start();
 
             //pool.submit(plug);
         } catch (Exception e) {
@@ -517,6 +495,10 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
 
     @Override
     public void pluginComplete() {
+        // tell Timing Profiler to stop timing and generate its report
+        if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable() )
+            timingProfilerWindow.stopTiming();
+
         // remove inactive plugins from activePlugs.
         Iterator<WhiteboxPlugin> iterator = activePlugs.iterator();
         ArrayList<WhiteboxPlugin> toRemove = new ArrayList<WhiteboxPlugin>();
