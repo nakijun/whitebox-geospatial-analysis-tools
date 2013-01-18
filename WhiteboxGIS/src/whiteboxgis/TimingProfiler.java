@@ -47,15 +47,15 @@ public class TimingProfiler extends javax.swing.JFrame {
         // Problems:
         //      Should hide their text fields, too!
         //      Hardcoded to 16; suppose nprocs > 16??
-        int n = 1;
+        int n = 0;
         for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
+            n++;
             JRadioButton b = (JRadioButton) bg.nextElement();
             if (n==useProcessors) {
                 selectProcsGrp.setSelected(b.getModel(), true);
             } else if (n>useProcessors) {
                 b.setVisible(false);
             }
-            n++;
         }
         
         this.pack();
@@ -71,6 +71,15 @@ public class TimingProfiler extends javax.swing.JFrame {
      * @param args Array of arguments given to WhiteboxGUI.runPlugin()
      */
     public void startTiming( WhiteboxPlugin plugin, String[] args ) {
+        
+        // find which radio button is currently clicked
+        int n = 0;
+        for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
+            n++;
+            JRadioButton b = (JRadioButton) bg.nextElement();
+            if (b.getModel().isSelected()) break;
+        }
+        useProcessors = n;  // do I even need useProcessors, or is it redundant?
         
         // update no. of processors so plugin can obtain it
         Parallel.setPluginProcessors(useProcessors);
@@ -109,13 +118,12 @@ public class TimingProfiler extends javax.swing.JFrame {
                     plugin.getName(),
                     Arrays.toString(pluginArgs),
                     "(unknown)",
-                    useProcessors,
+                    useProcessors,  // or Parallel.getPluginProcessors()
                     (float)(execTime/100000000)/10.0);
         JOptionPane.showMessageDialog(this, report, "Timing Report", JOptionPane.INFORMATION_MESSAGE);
     }
     
     /* button actions needing response:
-     * - when any of the button group are clicked -> update useProcessors
      * - Rerun tool -> call runPlugin(get name, saved args)
      * All the others are internal to the tool.
      */
