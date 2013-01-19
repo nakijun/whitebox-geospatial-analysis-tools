@@ -10,6 +10,7 @@ import javax.swing.AbstractButton;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import whitebox.interfaces.WhiteboxPlugin;
+import whitebox.interfaces.WhiteboxPluginHost;
 import whitebox.parallel.Parallel;
 
 /**
@@ -22,6 +23,8 @@ public class TimingProfiler extends javax.swing.JFrame {
     // parallelism should use.  It defaults to the max. no. available.
     private static int useProcessors = Runtime.getRuntime().availableProcessors();
     
+    WhiteboxPluginHost host;    // initialized by constructor
+    
     // This describes the tool currently being timed
     WhiteboxPlugin plugin;
     String[] pluginArgs;
@@ -32,8 +35,10 @@ public class TimingProfiler extends javax.swing.JFrame {
      * 
      * @param host Parent frame
      */
-    public TimingProfiler(WhiteboxGui host) {
+    public TimingProfiler(WhiteboxPluginHost host) {
         // want to use icon WhiteboxGIS/resources/Images/timer_clock.png
+        
+        this.host = host;
         
         initComponents();
         jPanel1.setVisible(true);
@@ -41,6 +46,8 @@ public class TimingProfiler extends javax.swing.JFrame {
         jPanel3.setVisible(true);
         jPanel4.setVisible(true);
         this.setVisible(true);
+        
+        // collect the text fields into an array so it's easy to update times
         
         // Go through the radio buttons, set as the default the one equal to
         // nprocs, and hide the remaining ones > nprocs
@@ -84,7 +91,8 @@ public class TimingProfiler extends javax.swing.JFrame {
         // update no. of processors so plugin can obtain it
         Parallel.setPluginProcessors(useProcessors);
         
-        // remember the name and args for stopTiming() call
+        // remember the name and args for stopTiming() and rerunTool button
+        this.host = host;
         this.plugin = plugin;
         this.pluginArgs = args;
         this.pluginStart = System.nanoTime();
@@ -122,11 +130,6 @@ public class TimingProfiler extends javax.swing.JFrame {
                     (float)(execTime/100000000)/10.0);
         JOptionPane.showMessageDialog(this, report, "Timing Report", JOptionPane.INFORMATION_MESSAGE);
     }
-    
-    /* button actions needing response:
-     * - Rerun tool -> call runPlugin(get name, saved args)
-     * All the others are internal to the tool.
-     */
     
     /**
      * This method is called from within the constructor to initialize the form.
@@ -184,8 +187,8 @@ public class TimingProfiler extends javax.swing.JFrame {
         jButton4 = new javax.swing.JButton();
         jButton5 = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
-        jButton6 = new javax.swing.JButton();
-        jButton7 = new javax.swing.JButton();
+        RerunToolButton = new javax.swing.JButton();
+        CloseButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Timing Profiler");
@@ -224,11 +227,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField1.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField1.setText("0.0");
         jTextField1.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 1;
@@ -251,11 +249,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField2.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField2.setText("0.0");
         jTextField2.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField2ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 3;
@@ -278,11 +271,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField3.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField3.setText("0.0");
         jTextField3.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField3ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 5;
@@ -304,11 +292,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField4.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField4.setText("0.0");
         jTextField4.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField4.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField4ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 7;
@@ -331,11 +314,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField5.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField5.setText("0.0");
         jTextField5.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField5.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField5ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 1;
@@ -358,11 +336,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField6.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField6.setText("0.0");
         jTextField6.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField6.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField6ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 3;
@@ -385,11 +358,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField7.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField7.setText("0.0");
         jTextField7.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField7.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField7ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 5;
@@ -411,11 +379,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField8.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField8.setText("0.0");
         jTextField8.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField8.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField8ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 7;
@@ -438,11 +401,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField9.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField9.setText("0.0");
         jTextField9.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField9.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField9ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 5;
         gridBagConstraints.gridy = 1;
@@ -465,11 +423,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField10.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField10.setText("0.0");
         jTextField10.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField10.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField10ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 5;
         gridBagConstraints.gridy = 3;
@@ -492,11 +445,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField11.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField11.setText("0.0");
         jTextField11.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField11.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField11ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 5;
         gridBagConstraints.gridy = 5;
@@ -518,11 +466,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField12.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField12.setText("0.0");
         jTextField12.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField12.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField12ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 5;
         gridBagConstraints.gridy = 7;
@@ -545,11 +488,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField13.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField13.setText("0.0");
         jTextField13.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField13.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField13ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 7;
         gridBagConstraints.gridy = 1;
@@ -572,11 +510,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField14.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField14.setText("0.0");
         jTextField14.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField14.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField14ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 7;
         gridBagConstraints.gridy = 3;
@@ -599,11 +532,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField15.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField15.setText("0.0");
         jTextField15.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField15.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField15ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 7;
         gridBagConstraints.gridy = 5;
@@ -625,11 +553,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField16.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
         jTextField16.setText("0.0");
         jTextField16.setPreferredSize(new java.awt.Dimension(80, 20));
-        jTextField16.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField16ActionPerformed(evt);
-            }
-        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 7;
         gridBagConstraints.gridy = 7;
@@ -692,11 +615,22 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(7, 170, 0, 0);
         getContentPane().add(jPanel3, gridBagConstraints);
 
-        jButton6.setText("Rerun Tool");
-        jPanel4.add(jButton6);
+        RerunToolButton.setText("Rerun Tool");
+        RerunToolButton.setActionCommand("");
+        RerunToolButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                RerunToolButtonActionPerformed(evt);
+            }
+        });
+        jPanel4.add(RerunToolButton);
 
-        jButton7.setText("Close");
-        jPanel4.add(jButton7);
+        CloseButton.setText("Close");
+        CloseButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                CloseButtonActionPerformed(evt);
+            }
+        });
+        jPanel4.add(CloseButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -708,79 +642,23 @@ public class TimingProfiler extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
+    private void RerunToolButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RerunToolButtonActionPerformed
+        host.runPlugin(plugin.getName(), pluginArgs);
+    }//GEN-LAST:event_RerunToolButtonActionPerformed
 
-    private void jTextField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField2ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField2ActionPerformed
-
-    private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField3ActionPerformed
-
-    private void jTextField4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField4ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField4ActionPerformed
-
-    private void jTextField5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField5ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField5ActionPerformed
-
-    private void jTextField6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField6ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField6ActionPerformed
-
-    private void jTextField7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField7ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField7ActionPerformed
-
-    private void jTextField8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField8ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField8ActionPerformed
-
-    private void jTextField9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField9ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField9ActionPerformed
-
-    private void jTextField10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField10ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField10ActionPerformed
-
-    private void jTextField11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField11ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField11ActionPerformed
-
-    private void jTextField12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField12ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField12ActionPerformed
-
-    private void jTextField13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField13ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField13ActionPerformed
-
-    private void jTextField14ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField14ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField14ActionPerformed
-
-    private void jTextField15ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField15ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField15ActionPerformed
-
-    private void jTextField16ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField16ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField16ActionPerformed
+    private void CloseButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CloseButtonActionPerformed
+        this.dispose();
+    }//GEN-LAST:event_CloseButtonActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton CloseButton;
+    private javax.swing.JButton RerunToolButton;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JButton jButton5;
-    private javax.swing.JButton jButton6;
-    private javax.swing.JButton jButton7;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel1;
