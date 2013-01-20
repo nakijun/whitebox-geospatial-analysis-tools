@@ -4,11 +4,12 @@
  */
 package whiteboxgis;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import javax.swing.AbstractButton;
-import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
+import javax.swing.JTextField;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
 import whitebox.parallel.Parallel;
@@ -30,6 +31,10 @@ public class TimingProfiler extends javax.swing.JFrame {
     String[] pluginArgs;
     long pluginStart;   // nanosecs
     
+    // Times and corresponding text fields
+    long[] times;
+    ArrayList<JTextField> fields;
+    
     /**
      * Creates TimingProfiler window
      * 
@@ -48,11 +53,28 @@ public class TimingProfiler extends javax.swing.JFrame {
         this.setVisible(true);
         
         // collect the text fields into an array so it's easy to update times
+        fields = new ArrayList<JTextField>();
+        fields.add(jTextField1);
+        fields.add(jTextField2);
+        fields.add(jTextField3);
+        fields.add(jTextField4);
+        fields.add(jTextField5);
+        fields.add(jTextField6);
+        fields.add(jTextField7);
+        fields.add(jTextField8);
+        fields.add(jTextField9);
+        fields.add(jTextField10);
+        fields.add(jTextField11);
+        fields.add(jTextField12);
+        fields.add(jTextField13);
+        fields.add(jTextField14);
+        fields.add(jTextField15);
+        fields.add(jTextField16);
+        times = new long[fields.size()];
         
         // Go through the radio buttons, set as the default the one equal to
-        // nprocs, and hide the remaining ones > nprocs
+        // nprocs, and hide the remaining ones > nprocs, and their text fields
         // Problems:
-        //      Should hide their text fields, too!
         //      Hardcoded to 16; suppose nprocs > 16??
         int n = 0;
         for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
@@ -62,6 +84,7 @@ public class TimingProfiler extends javax.swing.JFrame {
                 selectProcsGrp.setSelected(b.getModel(), true);
             } else if (n>useProcessors) {
                 b.setVisible(false);
+                fields.get(n-1).setVisible(false);
             }
         }
         
@@ -106,6 +129,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     public void stopTiming() {
         
         long execTime = System.nanoTime() - pluginStart;
+        float execSecs = (float) ((float)(execTime/100000000)/10.0);
         
         // NOTE: defer this to Java 8, when WhiteboxPlugin interface can have
         //  a default implementation of "none".  We want the method to be in
@@ -115,10 +139,12 @@ public class TimingProfiler extends javax.swing.JFrame {
         // interrogate the plugin to find out its style of parallelism
         // plugin.getParallelism();
         
-        // store results in textfield of [useProcessors], displaying as seconds
+        // store results for current no. of processors
+        times[useProcessors-1] = execTime;
+        fields.get(useProcessors-1).setText(String.format("%.1f", execSecs));
         
-        // format results in scrollable text box
-        String report = String.format("Tool name: %s%n" +
+        // format results in scrollable text area
+        log.append(String.format("Tool name: %s%n" +
                     "Arguments: %s%n" +
                     "Parallelism: %s%n" +
                     "No. processors: %d%n" +
@@ -127,8 +153,7 @@ public class TimingProfiler extends javax.swing.JFrame {
                     Arrays.toString(pluginArgs),
                     "(unknown)",
                     useProcessors,  // or Parallel.getPluginProcessors()
-                    (float)(execTime/100000000)/10.0);
-        JOptionPane.showMessageDialog(this, report, "Timing Report", JOptionPane.INFORMATION_MESSAGE);
+                    execSecs));
     }
     
     /**
@@ -179,13 +204,13 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField16 = new javax.swing.JTextField();
         jPanel2 = new javax.swing.JPanel();
         jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
+        ClearTimesButton = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTextArea1 = new javax.swing.JTextArea();
+        log = new javax.swing.JTextArea();
         jPanel3 = new javax.swing.JPanel();
         jButton3 = new javax.swing.JButton();
         jButton4 = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
+        ClearLogButton = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         RerunToolButton = new javax.swing.JButton();
         CloseButton = new javax.swing.JButton();
@@ -572,8 +597,13 @@ public class TimingProfiler extends javax.swing.JFrame {
         jButton1.setText("Copy Times to Log");
         jPanel2.add(jButton1);
 
-        jButton2.setText("Clear Times");
-        jPanel2.add(jButton2);
+        ClearTimesButton.setText("Clear Times");
+        ClearTimesButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ClearTimesButtonActionPerformed(evt);
+            }
+        });
+        jPanel2.add(ClearTimesButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -583,10 +613,9 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         jScrollPane1.setPreferredSize(new java.awt.Dimension(400, 200));
 
-        jTextArea1.setColumns(20);
-        jTextArea1.setRows(5);
-        jTextArea1.setText("This is where the logfile will appear\n");
-        jScrollPane1.setViewportView(jTextArea1);
+        log.setColumns(20);
+        log.setRows(5);
+        jScrollPane1.setViewportView(log);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -605,8 +634,13 @@ public class TimingProfiler extends javax.swing.JFrame {
         jButton4.setText("Save Log to File");
         jPanel3.add(jButton4);
 
-        jButton5.setText("Clear Log");
-        jPanel3.add(jButton5);
+        ClearLogButton.setText("Clear Log");
+        ClearLogButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ClearLogButtonActionPerformed(evt);
+            }
+        });
+        jPanel3.add(ClearLogButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -650,15 +684,27 @@ public class TimingProfiler extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_CloseButtonActionPerformed
 
+    private void ClearTimesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearTimesButtonActionPerformed
+        int n=0;
+        for (JTextField f : fields) {
+            f.setText("0.0");
+            times[n++] = 0;
+        }
+    }//GEN-LAST:event_ClearTimesButtonActionPerformed
+
+    private void ClearLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearLogButtonActionPerformed
+        log.setText("");
+    }//GEN-LAST:event_ClearLogButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton ClearLogButton;
+    private javax.swing.JButton ClearTimesButton;
     private javax.swing.JButton CloseButton;
     private javax.swing.JButton RerunToolButton;
     private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel1;
@@ -682,7 +728,6 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JRadioButton jRadioButton8;
     private javax.swing.JRadioButton jRadioButton9;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTextArea jTextArea1;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField10;
     private javax.swing.JTextField jTextField11;
@@ -699,6 +744,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField7;
     private javax.swing.JTextField jTextField8;
     private javax.swing.JTextField jTextField9;
+    private javax.swing.JTextArea log;
     private javax.swing.ButtonGroup selectProcsGrp;
     // End of variables declaration//GEN-END:variables
 }
