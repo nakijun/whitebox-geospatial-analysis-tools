@@ -170,40 +170,40 @@ public class TimingProfiler extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
-        jRadioButton1 = new javax.swing.JRadioButton();
+        procBtn1 = new javax.swing.JRadioButton();
         jTextField1 = new javax.swing.JTextField();
-        jRadioButton2 = new javax.swing.JRadioButton();
+        procBtn2 = new javax.swing.JRadioButton();
         jTextField2 = new javax.swing.JTextField();
-        jRadioButton3 = new javax.swing.JRadioButton();
+        procBtn3 = new javax.swing.JRadioButton();
         jTextField3 = new javax.swing.JTextField();
-        jRadioButton4 = new javax.swing.JRadioButton();
+        procBtn4 = new javax.swing.JRadioButton();
         jTextField4 = new javax.swing.JTextField();
-        jRadioButton5 = new javax.swing.JRadioButton();
+        procBtn5 = new javax.swing.JRadioButton();
         jTextField5 = new javax.swing.JTextField();
-        jRadioButton6 = new javax.swing.JRadioButton();
+        procBtn6 = new javax.swing.JRadioButton();
         jTextField6 = new javax.swing.JTextField();
-        jRadioButton7 = new javax.swing.JRadioButton();
+        procBtn7 = new javax.swing.JRadioButton();
         jTextField7 = new javax.swing.JTextField();
-        jRadioButton8 = new javax.swing.JRadioButton();
+        procBtn8 = new javax.swing.JRadioButton();
         jTextField8 = new javax.swing.JTextField();
-        jRadioButton9 = new javax.swing.JRadioButton();
+        procBtn9 = new javax.swing.JRadioButton();
         jTextField9 = new javax.swing.JTextField();
-        jRadioButton10 = new javax.swing.JRadioButton();
+        procBtn10 = new javax.swing.JRadioButton();
         jTextField10 = new javax.swing.JTextField();
-        jRadioButton11 = new javax.swing.JRadioButton();
+        procBtn11 = new javax.swing.JRadioButton();
         jTextField11 = new javax.swing.JTextField();
-        jRadioButton12 = new javax.swing.JRadioButton();
+        procBtn12 = new javax.swing.JRadioButton();
         jTextField12 = new javax.swing.JTextField();
-        jRadioButton13 = new javax.swing.JRadioButton();
+        procBtn13 = new javax.swing.JRadioButton();
         jTextField13 = new javax.swing.JTextField();
-        jRadioButton14 = new javax.swing.JRadioButton();
+        procBtn14 = new javax.swing.JRadioButton();
         jTextField14 = new javax.swing.JTextField();
-        jRadioButton15 = new javax.swing.JRadioButton();
+        procBtn15 = new javax.swing.JRadioButton();
         jTextField15 = new javax.swing.JTextField();
-        jRadioButton16 = new javax.swing.JRadioButton();
+        procBtn16 = new javax.swing.JRadioButton();
         jTextField16 = new javax.swing.JTextField();
         jPanel2 = new javax.swing.JPanel();
-        jButton1 = new javax.swing.JButton();
+        copyToLogButton = new javax.swing.JButton();
         ClearTimesButton = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         log = new javax.swing.JTextArea();
@@ -217,9 +217,13 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Timing Profiler");
+        setMinimumSize(new java.awt.Dimension(650, 500));
         getContentPane().setLayout(new java.awt.GridBagLayout());
 
         jPanel1.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jPanel1.setMinimumSize(new java.awt.Dimension(300, 300));
+        jPanel1.setName(""); // NOI18N
+        jPanel1.setPreferredSize(new java.awt.Dimension(300, 100));
         jPanel1.setLayout(new java.awt.GridBagLayout());
 
         jLabel1.setText("Procs");
@@ -227,7 +231,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(0, 10, 0, 0);
         jPanel1.add(jLabel1, gridBagConstraints);
 
         jLabel2.setText("Time (s)");
@@ -235,18 +238,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(0, 18, 0, 0);
         jPanel1.add(jLabel2, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton1);
-        jRadioButton1.setText("1");
+        selectProcsGrp.add(procBtn1);
+        procBtn1.setText("1");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(5, 10, 0, 0);
-        jPanel1.add(jRadioButton1, gridBagConstraints);
+        jPanel1.add(procBtn1, gridBagConstraints);
 
         jTextField1.setEditable(false);
         jTextField1.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -257,18 +258,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 1;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(6, 2, 0, 0);
         jPanel1.add(jTextField1, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton2);
-        jRadioButton2.setText("2");
+        selectProcsGrp.add(procBtn2);
+        procBtn2.setText("2");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 3;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 10, 0, 0);
-        jPanel1.add(jRadioButton2, gridBagConstraints);
+        jPanel1.add(procBtn2, gridBagConstraints);
 
         jTextField2.setEditable(false);
         jTextField2.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -279,18 +278,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 3;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField2, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton3);
-        jRadioButton3.setText("3");
+        selectProcsGrp.add(procBtn3);
+        procBtn3.setText("3");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 5;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 10, 0, 0);
-        jPanel1.add(jRadioButton3, gridBagConstraints);
+        jPanel1.add(procBtn3, gridBagConstraints);
 
         jTextField3.setEditable(false);
         jTextField3.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -301,17 +298,15 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 5;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField3, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton4);
-        jRadioButton4.setText("4");
+        selectProcsGrp.add(procBtn4);
+        procBtn4.setText("4");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 7;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 10, 392, 0);
-        jPanel1.add(jRadioButton4, gridBagConstraints);
+        jPanel1.add(procBtn4, gridBagConstraints);
 
         jTextField4.setEditable(false);
         jTextField4.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -322,18 +317,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 7;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField4, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton5);
-        jRadioButton5.setText("5");
+        selectProcsGrp.add(procBtn5);
+        procBtn5.setText("5");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(5, 6, 0, 0);
-        jPanel1.add(jRadioButton5, gridBagConstraints);
+        jPanel1.add(procBtn5, gridBagConstraints);
 
         jTextField5.setEditable(false);
         jTextField5.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -344,18 +337,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 1;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(6, 2, 0, 0);
         jPanel1.add(jTextField5, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton6);
-        jRadioButton6.setText("6");
+        selectProcsGrp.add(procBtn6);
+        procBtn6.setText("6");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 3;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 6, 0, 0);
-        jPanel1.add(jRadioButton6, gridBagConstraints);
+        jPanel1.add(procBtn6, gridBagConstraints);
 
         jTextField6.setEditable(false);
         jTextField6.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -366,18 +357,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 3;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField6, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton7);
-        jRadioButton7.setText("7");
+        selectProcsGrp.add(procBtn7);
+        procBtn7.setText("7");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 5;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 6, 0, 0);
-        jPanel1.add(jRadioButton7, gridBagConstraints);
+        jPanel1.add(procBtn7, gridBagConstraints);
 
         jTextField7.setEditable(false);
         jTextField7.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -388,17 +377,15 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 5;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField7, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton8);
-        jRadioButton8.setText("8");
+        selectProcsGrp.add(procBtn8);
+        procBtn8.setText("8");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 7;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 6, 392, 0);
-        jPanel1.add(jRadioButton8, gridBagConstraints);
+        jPanel1.add(procBtn8, gridBagConstraints);
 
         jTextField8.setEditable(false);
         jTextField8.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -409,18 +396,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 7;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField8, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton9);
-        jRadioButton9.setText("9  ");
+        selectProcsGrp.add(procBtn9);
+        procBtn9.setText("9  ");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(5, 2, 0, 0);
-        jPanel1.add(jRadioButton9, gridBagConstraints);
+        jPanel1.add(procBtn9, gridBagConstraints);
 
         jTextField9.setEditable(false);
         jTextField9.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -431,18 +416,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 1;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(6, 2, 0, 0);
         jPanel1.add(jTextField9, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton10);
-        jRadioButton10.setText("10");
+        selectProcsGrp.add(procBtn10);
+        procBtn10.setText("10");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 3;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
-        jPanel1.add(jRadioButton10, gridBagConstraints);
+        jPanel1.add(procBtn10, gridBagConstraints);
 
         jTextField10.setEditable(false);
         jTextField10.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -453,18 +436,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 3;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField10, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton11);
-        jRadioButton11.setText("11");
+        selectProcsGrp.add(procBtn11);
+        procBtn11.setText("11");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 5;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
-        jPanel1.add(jRadioButton11, gridBagConstraints);
+        jPanel1.add(procBtn11, gridBagConstraints);
 
         jTextField11.setEditable(false);
         jTextField11.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -475,17 +456,15 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 5;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField11, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton12);
-        jRadioButton12.setText("12");
+        selectProcsGrp.add(procBtn12);
+        procBtn12.setText("12");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 7;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 2, 392, 0);
-        jPanel1.add(jRadioButton12, gridBagConstraints);
+        jPanel1.add(procBtn12, gridBagConstraints);
 
         jTextField12.setEditable(false);
         jTextField12.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -496,18 +475,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 7;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 0);
         jPanel1.add(jTextField12, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton13);
-        jRadioButton13.setText("13");
+        selectProcsGrp.add(procBtn13);
+        procBtn13.setText("13");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(5, 2, 0, 0);
-        jPanel1.add(jRadioButton13, gridBagConstraints);
+        jPanel1.add(procBtn13, gridBagConstraints);
 
         jTextField13.setEditable(false);
         jTextField13.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -518,18 +495,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 1;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(6, 2, 0, 10);
         jPanel1.add(jTextField13, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton14);
-        jRadioButton14.setText("14");
+        selectProcsGrp.add(procBtn14);
+        procBtn14.setText("14");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 3;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
-        jPanel1.add(jRadioButton14, gridBagConstraints);
+        jPanel1.add(procBtn14, gridBagConstraints);
 
         jTextField14.setEditable(false);
         jTextField14.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -540,18 +515,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 3;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 10);
         jPanel1.add(jTextField14, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton15);
-        jRadioButton15.setText("15");
+        selectProcsGrp.add(procBtn15);
+        procBtn15.setText("15");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 5;
         gridBagConstraints.gridheight = 2;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 2, 0, 0);
-        jPanel1.add(jRadioButton15, gridBagConstraints);
+        jPanel1.add(procBtn15, gridBagConstraints);
 
         jTextField15.setEditable(false);
         jTextField15.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -562,17 +535,15 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 5;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 10);
         jPanel1.add(jTextField15, gridBagConstraints);
 
-        selectProcsGrp.add(jRadioButton16);
-        jRadioButton16.setText("16");
+        selectProcsGrp.add(procBtn16);
+        procBtn16.setText("16");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 7;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(3, 2, 392, 0);
-        jPanel1.add(jRadioButton16, gridBagConstraints);
+        jPanel1.add(procBtn16, gridBagConstraints);
 
         jTextField16.setEditable(false);
         jTextField16.setHorizontalAlignment(javax.swing.JTextField.RIGHT);
@@ -583,21 +554,27 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 7;
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(4, 2, 0, 10);
         jPanel1.add(jTextField16, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.ipadx = 20;
         gridBagConstraints.ipady = 20;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTH;
         getContentPane().add(jPanel1, gridBagConstraints);
 
-        jButton1.setText("Copy Times to Log");
-        jPanel2.add(jButton1);
+        copyToLogButton.setText("Copy Times to Log");
+        copyToLogButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                copyToLogButtonActionPerformed(evt);
+            }
+        });
+        jPanel2.add(copyToLogButton);
 
         ClearTimesButton.setText("Clear Times");
+        ClearTimesButton.setPreferredSize(new java.awt.Dimension(121, 23));
         ClearTimesButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ClearTimesButtonActionPerformed(evt);
@@ -608,7 +585,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
-        gridBagConstraints.insets = new java.awt.Insets(136, 223, 0, 0);
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTH;
         getContentPane().add(jPanel2, gridBagConstraints);
 
         jScrollPane1.setPreferredSize(new java.awt.Dimension(400, 200));
@@ -621,20 +598,20 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 2;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
-        gridBagConstraints.ipadx = 472;
-        gridBagConstraints.ipady = 161;
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.weighty = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(9, 90, 0, 0);
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTH;
+        gridBagConstraints.weightx = 0.1;
+        gridBagConstraints.weighty = 0.9;
         getContentPane().add(jScrollPane1, gridBagConstraints);
 
         jButton3.setText("Delete Last Report");
         jPanel3.add(jButton3);
 
         jButton4.setText("Save Log to File");
+        jButton4.setPreferredSize(new java.awt.Dimension(123, 23));
         jPanel3.add(jButton4);
 
         ClearLogButton.setText("Clear Log");
+        ClearLogButton.setPreferredSize(new java.awt.Dimension(123, 23));
         ClearLogButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ClearLogButtonActionPerformed(evt);
@@ -645,8 +622,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 3;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(7, 170, 0, 0);
         getContentPane().add(jPanel3, gridBagConstraints);
 
         RerunToolButton.setText("Rerun Tool");
@@ -659,6 +634,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         jPanel4.add(RerunToolButton);
 
         CloseButton.setText("Close");
+        CloseButton.setPreferredSize(new java.awt.Dimension(85, 23));
         CloseButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 CloseButtonActionPerformed(evt);
@@ -669,8 +645,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 4;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
-        gridBagConstraints.insets = new java.awt.Insets(16, 258, 0, 0);
         getContentPane().add(jPanel4, gridBagConstraints);
 
         pack();
@@ -696,13 +670,17 @@ public class TimingProfiler extends javax.swing.JFrame {
         log.setText("");
     }//GEN-LAST:event_ClearLogButtonActionPerformed
 
+    private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_copyToLogButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton ClearLogButton;
     private javax.swing.JButton ClearTimesButton;
     private javax.swing.JButton CloseButton;
     private javax.swing.JButton RerunToolButton;
-    private javax.swing.JButton jButton1;
+    private javax.swing.JButton copyToLogButton;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JLabel jLabel1;
@@ -711,22 +689,6 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
-    private javax.swing.JRadioButton jRadioButton1;
-    private javax.swing.JRadioButton jRadioButton10;
-    private javax.swing.JRadioButton jRadioButton11;
-    private javax.swing.JRadioButton jRadioButton12;
-    private javax.swing.JRadioButton jRadioButton13;
-    private javax.swing.JRadioButton jRadioButton14;
-    private javax.swing.JRadioButton jRadioButton15;
-    private javax.swing.JRadioButton jRadioButton16;
-    private javax.swing.JRadioButton jRadioButton2;
-    private javax.swing.JRadioButton jRadioButton3;
-    private javax.swing.JRadioButton jRadioButton4;
-    private javax.swing.JRadioButton jRadioButton5;
-    private javax.swing.JRadioButton jRadioButton6;
-    private javax.swing.JRadioButton jRadioButton7;
-    private javax.swing.JRadioButton jRadioButton8;
-    private javax.swing.JRadioButton jRadioButton9;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField10;
@@ -745,6 +707,22 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField8;
     private javax.swing.JTextField jTextField9;
     private javax.swing.JTextArea log;
+    private javax.swing.JRadioButton procBtn1;
+    private javax.swing.JRadioButton procBtn10;
+    private javax.swing.JRadioButton procBtn11;
+    private javax.swing.JRadioButton procBtn12;
+    private javax.swing.JRadioButton procBtn13;
+    private javax.swing.JRadioButton procBtn14;
+    private javax.swing.JRadioButton procBtn15;
+    private javax.swing.JRadioButton procBtn16;
+    private javax.swing.JRadioButton procBtn2;
+    private javax.swing.JRadioButton procBtn3;
+    private javax.swing.JRadioButton procBtn4;
+    private javax.swing.JRadioButton procBtn5;
+    private javax.swing.JRadioButton procBtn6;
+    private javax.swing.JRadioButton procBtn7;
+    private javax.swing.JRadioButton procBtn8;
+    private javax.swing.JRadioButton procBtn9;
     private javax.swing.ButtonGroup selectProcsGrp;
     // End of variables declaration//GEN-END:variables
 }
