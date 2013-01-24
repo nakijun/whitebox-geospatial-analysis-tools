@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import javax.swing.AbstractButton;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import whitebox.interfaces.WhiteboxPlugin;
@@ -118,6 +120,11 @@ public class TimingProfiler extends javax.swing.JFrame {
         this.host = host;
         this.plugin = plugin;
         this.pluginArgs = args;
+        
+        // force garbage collection so it doesn't occur during timing run
+        System.gc();
+        
+        // very last thing, capture current time
         this.pluginStart = System.nanoTime();
     }
     
@@ -148,7 +155,7 @@ public class TimingProfiler extends javax.swing.JFrame {
                     "Arguments: %s%n" +
                     "Parallelism: %s%n" +
                     "No. processors: %d%n" +
-                    "Execution time (sec): %.1f",
+                    "Execution time (sec): %.1f%n%n",
                     plugin.getName(),
                     Arrays.toString(pluginArgs),
                     "(unknown)",
@@ -204,20 +211,21 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField16 = new javax.swing.JTextField();
         jPanel2 = new javax.swing.JPanel();
         copyToLogButton = new javax.swing.JButton();
-        ClearTimesButton = new javax.swing.JButton();
+        clearTimesButton = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         log = new javax.swing.JTextArea();
         jPanel3 = new javax.swing.JPanel();
-        jButton3 = new javax.swing.JButton();
-        jButton4 = new javax.swing.JButton();
-        ClearLogButton = new javax.swing.JButton();
+        deleteLastReportButton = new javax.swing.JButton();
+        saveLogToFileButton = new javax.swing.JButton();
+        clearLogButton = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
-        RerunToolButton = new javax.swing.JButton();
-        CloseButton = new javax.swing.JButton();
+        rerunToolButton = new javax.swing.JButton();
+        closeButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Timing Profiler");
-        setMinimumSize(new java.awt.Dimension(650, 500));
+        setMinimumSize(new java.awt.Dimension(800, 500));
+        setPreferredSize(new java.awt.Dimension(800, 419));
         getContentPane().setLayout(new java.awt.GridBagLayout());
 
         jPanel1.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
@@ -573,14 +581,14 @@ public class TimingProfiler extends javax.swing.JFrame {
         });
         jPanel2.add(copyToLogButton);
 
-        ClearTimesButton.setText("Clear Times");
-        ClearTimesButton.setPreferredSize(new java.awt.Dimension(121, 23));
-        ClearTimesButton.addActionListener(new java.awt.event.ActionListener() {
+        clearTimesButton.setText("Clear Times");
+        clearTimesButton.setPreferredSize(new java.awt.Dimension(121, 23));
+        clearTimesButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ClearTimesButtonActionPerformed(evt);
+                clearTimesButtonActionPerformed(evt);
             }
         });
-        jPanel2.add(ClearTimesButton);
+        jPanel2.add(clearTimesButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -603,44 +611,49 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.weighty = 0.9;
         getContentPane().add(jScrollPane1, gridBagConstraints);
 
-        jButton3.setText("Delete Last Report");
-        jPanel3.add(jButton3);
+        deleteLastReportButton.setText("Delete Last Report");
+        jPanel3.add(deleteLastReportButton);
 
-        jButton4.setText("Save Log to File");
-        jButton4.setPreferredSize(new java.awt.Dimension(123, 23));
-        jPanel3.add(jButton4);
-
-        ClearLogButton.setText("Clear Log");
-        ClearLogButton.setPreferredSize(new java.awt.Dimension(123, 23));
-        ClearLogButton.addActionListener(new java.awt.event.ActionListener() {
+        saveLogToFileButton.setText("Save Log to File");
+        saveLogToFileButton.setPreferredSize(new java.awt.Dimension(123, 23));
+        saveLogToFileButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ClearLogButtonActionPerformed(evt);
+                saveLogToFileButtonActionPerformed(evt);
             }
         });
-        jPanel3.add(ClearLogButton);
+        jPanel3.add(saveLogToFileButton);
+
+        clearLogButton.setText("Clear Log");
+        clearLogButton.setPreferredSize(new java.awt.Dimension(123, 23));
+        clearLogButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                clearLogButtonActionPerformed(evt);
+            }
+        });
+        jPanel3.add(clearLogButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 3;
         getContentPane().add(jPanel3, gridBagConstraints);
 
-        RerunToolButton.setText("Rerun Tool");
-        RerunToolButton.setActionCommand("");
-        RerunToolButton.addActionListener(new java.awt.event.ActionListener() {
+        rerunToolButton.setText("Rerun Tool");
+        rerunToolButton.setActionCommand("");
+        rerunToolButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                RerunToolButtonActionPerformed(evt);
+                rerunToolButtonActionPerformed(evt);
             }
         });
-        jPanel4.add(RerunToolButton);
+        jPanel4.add(rerunToolButton);
 
-        CloseButton.setText("Close");
-        CloseButton.setPreferredSize(new java.awt.Dimension(85, 23));
-        CloseButton.addActionListener(new java.awt.event.ActionListener() {
+        closeButton.setText("Close");
+        closeButton.setPreferredSize(new java.awt.Dimension(85, 23));
+        closeButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                CloseButtonActionPerformed(evt);
+                closeButtonActionPerformed(evt);
             }
         });
-        jPanel4.add(CloseButton);
+        jPanel4.add(closeButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -650,39 +663,43 @@ public class TimingProfiler extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void RerunToolButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RerunToolButtonActionPerformed
+    private void rerunToolButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rerunToolButtonActionPerformed
         host.runPlugin(plugin.getName(), pluginArgs);
-    }//GEN-LAST:event_RerunToolButtonActionPerformed
+    }//GEN-LAST:event_rerunToolButtonActionPerformed
 
-    private void CloseButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CloseButtonActionPerformed
+    private void closeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeButtonActionPerformed
         this.dispose();
-    }//GEN-LAST:event_CloseButtonActionPerformed
+    }//GEN-LAST:event_closeButtonActionPerformed
 
-    private void ClearTimesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearTimesButtonActionPerformed
+    private void clearTimesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearTimesButtonActionPerformed
         int n=0;
         for (JTextField f : fields) {
             f.setText("0.0");
             times[n++] = 0;
         }
-    }//GEN-LAST:event_ClearTimesButtonActionPerformed
+    }//GEN-LAST:event_clearTimesButtonActionPerformed
 
-    private void ClearLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearLogButtonActionPerformed
+    private void clearLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearLogButtonActionPerformed
         log.setText("");
-    }//GEN-LAST:event_ClearLogButtonActionPerformed
+    }//GEN-LAST:event_clearLogButtonActionPerformed
 
     private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_copyToLogButtonActionPerformed
 
+    private void saveLogToFileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveLogToFileButtonActionPerformed
+        JFileChooser a = new JFileChooser();
+        a.showSaveDialog(this);
+       
+    }//GEN-LAST:event_saveLogToFileButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton ClearLogButton;
-    private javax.swing.JButton ClearTimesButton;
-    private javax.swing.JButton CloseButton;
-    private javax.swing.JButton RerunToolButton;
+    private javax.swing.JButton clearLogButton;
+    private javax.swing.JButton clearTimesButton;
+    private javax.swing.JButton closeButton;
     private javax.swing.JButton copyToLogButton;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
+    private javax.swing.JButton deleteLastReportButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel1;
@@ -723,6 +740,8 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JRadioButton procBtn7;
     private javax.swing.JRadioButton procBtn8;
     private javax.swing.JRadioButton procBtn9;
+    private javax.swing.JButton rerunToolButton;
+    private javax.swing.JButton saveLogToFileButton;
     private javax.swing.ButtonGroup selectProcsGrp;
     // End of variables declaration//GEN-END:variables
 }
