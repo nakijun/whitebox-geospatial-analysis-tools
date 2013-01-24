@@ -15,6 +15,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ExecutionException;
 /**
  *    A Java Parallel for SMP
+ * 
+ * [24-Jan-13] This class is under development and its parallel methods
+ * should be used with caution, if at all.  In the near term, it is chiefly
+ * being used to provide a place where plugins with parallel algorithms may
+ * find out how many processors to use (e.g., how many threads to create).
+ * That limit is managed by the Timing Profiler window that can be popped
+ * up from the main GUI's Tools menu.  Ordinary users will not care to use
+ * this tool, thus parallelized plugins will utilize all available processors
+ * by default.
  */
 public class Parallel {
 

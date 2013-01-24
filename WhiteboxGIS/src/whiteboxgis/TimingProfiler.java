@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import javax.swing.AbstractButton;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
@@ -21,10 +20,6 @@ import whitebox.parallel.Parallel;
  * @author Bill Gardner <wgardner@socs.uoguelph.ca>
  */
 public class TimingProfiler extends javax.swing.JFrame {
-
-    // This is the no. of processors ("threads") that a tool with adjustable
-    // parallelism should use.  It defaults to the max. no. available.
-    private static int useProcessors = Runtime.getRuntime().availableProcessors();
     
     WhiteboxPluginHost host;    // initialized by constructor
     
@@ -55,7 +50,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         this.setVisible(true);
         
         // collect the text fields into an array so it's easy to update times
-        fields = new ArrayList<JTextField>();
+        fields = new ArrayList<>();
         fields.add(jTextField1);
         fields.add(jTextField2);
         fields.add(jTextField3);
@@ -74,6 +69,10 @@ public class TimingProfiler extends javax.swing.JFrame {
         fields.add(jTextField16);
         times = new long[fields.size()];
         
+        // This is the platform-specific max. no. of available processors that
+        // we need to account for.
+        int nprocs = Runtime.getRuntime().availableProcessors();
+        
         // Go through the radio buttons, set as the default the one equal to
         // nprocs, and hide the remaining ones > nprocs, and their text fields
         // Problems:
@@ -82,9 +81,9 @@ public class TimingProfiler extends javax.swing.JFrame {
         for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
             n++;
             JRadioButton b = (JRadioButton) bg.nextElement();
-            if (n==useProcessors) {
+            if (n==nprocs) {
                 selectProcsGrp.setSelected(b.getModel(), true);
-            } else if (n>useProcessors) {
+            } else if (n>nprocs) {
                 b.setVisible(false);
                 fields.get(n-1).setVisible(false);
             }
@@ -111,13 +110,11 @@ public class TimingProfiler extends javax.swing.JFrame {
             JRadioButton b = (JRadioButton) bg.nextElement();
             if (b.getModel().isSelected()) break;
         }
-        useProcessors = n;  // do I even need useProcessors, or is it redundant?
-        
+
         // update no. of processors so plugin can obtain it
-        Parallel.setPluginProcessors(useProcessors);
+        Parallel.setPluginProcessors(n);
         
         // remember the name and args for stopTiming() and rerunTool button
-        this.host = host;
         this.plugin = plugin;
         this.pluginArgs = args;
         
@@ -147,10 +144,11 @@ public class TimingProfiler extends javax.swing.JFrame {
         // plugin.getParallelism();
         
         // store results for current no. of processors
-        times[useProcessors-1] = execTime;
-        fields.get(useProcessors-1).setText(String.format("%.1f", execSecs));
+        int nprocs = Parallel.getPluginProcessors();
+        times[nprocs-1] = execTime;
+        fields.get(nprocs-1).setText(String.format("%.1f", execSecs));
         
-        // format results in scrollable text area
+        // format results in scrollable text area, and scroll to (new) bottom
         log.append(String.format("Tool name: %s%n" +
                     "Arguments: %s%n" +
                     "Parallelism: %s%n" +
@@ -159,8 +157,9 @@ public class TimingProfiler extends javax.swing.JFrame {
                     plugin.getName(),
                     Arrays.toString(pluginArgs),
                     "(unknown)",
-                    useProcessors,  // or Parallel.getPluginProcessors()
+                    nprocs,  // or Parallel.getPluginProcessors()
                     execSecs));
+        log.setCaretPosition(log.getDocument().getLength());
     }
     
     /**
@@ -600,6 +599,7 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         log.setColumns(20);
         log.setRows(5);
+        log.setCursor(new java.awt.Cursor(java.awt.Cursor.TEXT_CURSOR));
         jScrollPane1.setViewportView(log);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
