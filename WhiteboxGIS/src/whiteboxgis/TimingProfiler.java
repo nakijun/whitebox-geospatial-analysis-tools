@@ -4,11 +4,15 @@
  */
 package whiteboxgis;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import javax.swing.AbstractButton;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import whitebox.interfaces.WhiteboxPlugin;
@@ -219,6 +223,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         clearLogButton = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         rerunToolButton = new javax.swing.JButton();
+        runAllButton = new javax.swing.JButton();
         closeButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
@@ -646,6 +651,14 @@ public class TimingProfiler extends javax.swing.JFrame {
         });
         jPanel4.add(rerunToolButton);
 
+        runAllButton.setText("Run All");
+        runAllButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                runAllButtonActionPerformed(evt);
+            }
+        });
+        jPanel4.add(runAllButton);
+
         closeButton.setText("Close");
         closeButton.setPreferredSize(new java.awt.Dimension(85, 23));
         closeButton.addActionListener(new java.awt.event.ActionListener() {
@@ -684,14 +697,45 @@ public class TimingProfiler extends javax.swing.JFrame {
     }//GEN-LAST:event_clearLogButtonActionPerformed
 
     private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
-        // TODO add your handling code here:
+        int n = 1;
+        for (JTextField f : fields) {
+            log.append(n + " : " + f.getText() + System.lineSeparator());
+            n++;
+        }
     }//GEN-LAST:event_copyToLogButtonActionPerformed
 
     private void saveLogToFileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveLogToFileButtonActionPerformed
-        JFileChooser a = new JFileChooser();
-        a.showSaveDialog(this);
-       
+        JFileChooser chooser = new JFileChooser();
+        int value = chooser.showSaveDialog(this);
+        
+        if (value == JFileChooser.APPROVE_OPTION) {     
+            // Open the selected file and write log to it
+            File selection = chooser.getSelectedFile();
+            
+            try {
+                if (!selection.exists()) {
+                    selection.createNewFile();
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Unable to create new file: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            
+            String logText = log.getText();
+            
+            // try with resource, it will close on good or bad result
+            // BufferedWriter needs a size > 0, adding 1 to prevent exception
+            try (BufferedWriter bf = new BufferedWriter(new FileWriter(selection), logText.getBytes().length + 1)) {
+                bf.append(logText);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Unable to save file", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
     }//GEN-LAST:event_saveLogToFileButtonActionPerformed
+
+    private void runAllButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runAllButtonActionPerformed
+        JOptionPane.showMessageDialog(this, "This feature is not yet implemented!");
+    }//GEN-LAST:event_runAllButtonActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -741,6 +785,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JRadioButton procBtn8;
     private javax.swing.JRadioButton procBtn9;
     private javax.swing.JButton rerunToolButton;
+    private javax.swing.JButton runAllButton;
     private javax.swing.JButton saveLogToFileButton;
     private javax.swing.ButtonGroup selectProcsGrp;
     // End of variables declaration//GEN-END:variables
