@@ -10,6 +10,8 @@ import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
 import javax.swing.AbstractButton;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -31,6 +33,8 @@ public class TimingProfiler extends javax.swing.JFrame {
     WhiteboxPlugin plugin;
     String[] pluginArgs;
     long pluginStart;   // nanosecs
+    
+    List<Integer> runPluginList = new LinkedList();
     
     // Times and corresponding text fields
     long[] times;
@@ -77,6 +81,12 @@ public class TimingProfiler extends javax.swing.JFrame {
         // we need to account for.
         int nprocs = Runtime.getRuntime().availableProcessors();
         
+        setSelectedProcessors(nprocs);
+        
+        this.pack();
+    }
+    
+    private void setSelectedProcessors(int nprocs) {
         // Go through the radio buttons, set as the default the one equal to
         // nprocs, and hide the remaining ones > nprocs, and their text fields
         // Problems:
@@ -92,8 +102,24 @@ public class TimingProfiler extends javax.swing.JFrame {
                 fields.get(n-1).setVisible(false);
             }
         }
+    }
+    
+    /**
+     * Gets the selected number of processors
+     * @return the number of processors selected to be used.
+     */
+    private int getSelectedProcessors() {
+                
+        // find which radio button is currently clicked
+        int n = 0;
+        try {
+            JRadioButton selected = (JRadioButton)selectProcsGrp.getSelection();
+            n = Integer.parseInt(selected.getActionCommand());
+        } catch (NumberFormatException e) {
+            System.out.println("Error getting action command for processor button.");
+        }
         
-        this.pack();
+        return n;
     }
     
     /**
@@ -106,20 +132,19 @@ public class TimingProfiler extends javax.swing.JFrame {
      * @param args Array of arguments given to WhiteboxGUI.runPlugin()
      */
     public void startTiming( WhiteboxPlugin plugin, String[] args ) {
-        
-        // find which radio button is currently clicked
-        int n = 0;
-        for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
-            n++;
-            JRadioButton b = (JRadioButton) bg.nextElement();
-            if (b.getModel().isSelected()) break;
-        }
-
         // update no. of processors so plugin can obtain it
-        Parallel.setPluginProcessors(n);
+        int threads = getSelectedProcessors();
+        Parallel.setPluginProcessors(threads);
         
         // remember the name and args for stopTiming() and rerunTool button
         this.plugin = plugin;
+        if (plugin != null) {
+            rerunToolButton.setEnabled(true);
+            runAllButton.setEnabled(true);
+        } else {
+            rerunToolButton.setEnabled(false);
+            runAllButton.setEnabled(false);
+        }
         this.pluginArgs = args;
         
         // force garbage collection so it doesn't occur during timing run
@@ -164,6 +189,13 @@ public class TimingProfiler extends javax.swing.JFrame {
                     nprocs,  // or Parallel.getPluginProcessors()
                     execSecs));
         log.setCaretPosition(log.getDocument().getLength());
+        
+        // If there are most configurations to run, start the next one.
+        if (!runPluginList.isEmpty()) {
+            int nextnprocs = runPluginList.remove(0);
+            Parallel.setPluginProcessors(nextnprocs);
+            host.runPlugin(plugin.getName(), pluginArgs);
+        }
     }
     
     /**
@@ -644,6 +676,7 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         rerunToolButton.setText("Rerun Tool");
         rerunToolButton.setActionCommand("");
+        rerunToolButton.setEnabled(false);
         rerunToolButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 rerunToolButtonActionPerformed(evt);
@@ -652,6 +685,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         jPanel4.add(rerunToolButton);
 
         runAllButton.setText("Run All");
+        runAllButton.setEnabled(false);
         runAllButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 runAllButtonActionPerformed(evt);
@@ -677,7 +711,9 @@ public class TimingProfiler extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void rerunToolButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_rerunToolButtonActionPerformed
-        host.runPlugin(plugin.getName(), pluginArgs);
+        if (plugin != null) {
+            host.runPlugin(plugin.getName(), pluginArgs);
+        }
     }//GEN-LAST:event_rerunToolButtonActionPerformed
 
     private void closeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeButtonActionPerformed
@@ -710,8 +746,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         
         if (value == JFileChooser.APPROVE_OPTION) {     
             // Open the selected file and write log to it
-            File selection = chooser.getSelectedFile();
-            
+            File selection = chooser.getSelectedFile();           
             try {
                 if (!selection.exists()) {
                     selection.createNewFile();
@@ -721,7 +756,6 @@ public class TimingProfiler extends javax.swing.JFrame {
             }
             
             String logText = log.getText();
-            
             // try with resource, it will close on good or bad result
             // BufferedWriter needs a size > 0, adding 1 to prevent exception
             try (BufferedWriter bf = new BufferedWriter(new FileWriter(selection), logText.getBytes().length + 1)) {
@@ -730,11 +764,15 @@ public class TimingProfiler extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Unable to save file", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
-
     }//GEN-LAST:event_saveLogToFileButtonActionPerformed
 
     private void runAllButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runAllButtonActionPerformed
-        JOptionPane.showMessageDialog(this, "This feature is not yet implemented!");
+        
+        // Add all processor configurations to run queue.
+        int availableProcs = Runtime.getRuntime().availableProcessors();
+        for (int i = 1; i < availableProcs; i++) {
+            runPluginList.add(i);
+        }
     }//GEN-LAST:event_runAllButtonActionPerformed
 
 

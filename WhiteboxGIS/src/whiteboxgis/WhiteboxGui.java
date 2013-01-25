@@ -353,8 +353,9 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             }
             
             // tell Timing Profiler to record start time
-            if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable() )
+            if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable() ) {
                 timingProfilerWindow.startTiming(plug, args);
+            }
             
             new Thread(plug).start();
 

@@ -636,6 +636,7 @@
           <Properties>
             <Property name="text" type="java.lang.String" value="Rerun Tool"/>
             <Property name="actionCommand" type="java.lang.String" value=""/>
+            <Property name="enabled" type="boolean" value="false"/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="rerunToolButtonActionPerformed"/>
@@ -644,6 +645,7 @@
         <Component class="javax.swing.JButton" name="runAllButton">
           <Properties>
             <Property name="text" type="java.lang.String" value="Run All"/>
+            <Property name="enabled" type="boolean" value="false"/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="runAllButtonActionPerformed"/>
