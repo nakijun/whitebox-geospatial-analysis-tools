@@ -17,6 +17,10 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
+import javax.swing.JToggleButton.ToggleButtonModel;
+import javax.swing.SwingUtilities;
+import javax.swing.plaf.basic.BasicBorders;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
 import whitebox.parallel.Parallel;
@@ -39,6 +43,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     // Times and corresponding text fields
     long[] times;
     ArrayList<JTextField> fields;
+    int visibleFields = 16;
     
     /**
      * Creates TimingProfiler window
@@ -81,7 +86,18 @@ public class TimingProfiler extends javax.swing.JFrame {
         // we need to account for.
         int nprocs = Runtime.getRuntime().availableProcessors();
         
-        setSelectedProcessors(nprocs);
+        int n = 0;
+        for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
+            n++;
+            JRadioButton b = (JRadioButton) bg.nextElement();
+            if (n==nprocs) {
+                selectProcsGrp.setSelected(b.getModel(), true);
+            } else if (n>nprocs) {
+                b.setVisible(false);
+                fields.get(n-1).setVisible(false);
+                visibleFields--;
+            }
+        }
         
         this.pack();
     }
@@ -92,14 +108,13 @@ public class TimingProfiler extends javax.swing.JFrame {
         // Problems:
         //      Hardcoded to 16; suppose nprocs > 16??
         int n = 0;
+        
         for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
             n++;
             JRadioButton b = (JRadioButton) bg.nextElement();
             if (n==nprocs) {
                 selectProcsGrp.setSelected(b.getModel(), true);
-            } else if (n>nprocs) {
-                b.setVisible(false);
-                fields.get(n-1).setVisible(false);
+                break;
             }
         }
     }
@@ -113,8 +128,13 @@ public class TimingProfiler extends javax.swing.JFrame {
         // find which radio button is currently clicked
         int n = 0;
         try {
-            JRadioButton selected = (JRadioButton)selectProcsGrp.getSelection();
-            n = Integer.parseInt(selected.getActionCommand());
+            for (Enumeration<AbstractButton> btns = selectProcsGrp.getElements(); btns.hasMoreElements(); ) {
+                JRadioButton radioBtn = (JRadioButton)btns.nextElement();
+                if (radioBtn.isSelected()) {
+                    n = Integer.parseInt(radioBtn.getActionCommand());
+                    break;
+                }
+            }
         } catch (NumberFormatException e) {
             System.out.println("Error getting action command for processor button.");
         }
@@ -189,12 +209,30 @@ public class TimingProfiler extends javax.swing.JFrame {
                     nprocs,  // or Parallel.getPluginProcessors()
                     execSecs));
         log.setCaretPosition(log.getDocument().getLength());
-        
-        // If there are most configurations to run, start the next one.
+
+                
+        // Will run next configuration is it exists.
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                runNext();
+            }
+        });
+    }
+    
+    /**
+     * Runs the next configuration pending if it exists. Used to facilitate the
+     * run all processor configurations button.
+     */
+    public void runNext() {
+                // If there are most configurations to run, start the next one.
         if (!runPluginList.isEmpty()) {
-            int nextnprocs = runPluginList.remove(0);
-            Parallel.setPluginProcessors(nextnprocs);
+            int nextProcs = runPluginList.remove(0);
+            setSelectedProcessors(nextProcs);
+            Parallel.setPluginProcessors(nextProcs);
             host.runPlugin(plugin.getName(), pluginArgs);
+        } else {
+            log.append(System.lineSeparator() + "Batch operation finished." + System.lineSeparator());
         }
     }
     
@@ -733,10 +771,9 @@ public class TimingProfiler extends javax.swing.JFrame {
     }//GEN-LAST:event_clearLogButtonActionPerformed
 
     private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
-        int n = 1;
-        for (JTextField f : fields) {
-            log.append(n + " : " + f.getText() + System.lineSeparator());
-            n++;
+        
+        for (int i = 0; i < visibleFields; i++) {
+            log.append(i + " : " + fields.get(i).getText() + System.lineSeparator());
         }
     }//GEN-LAST:event_copyToLogButtonActionPerformed
 
@@ -768,10 +805,15 @@ public class TimingProfiler extends javax.swing.JFrame {
 
     private void runAllButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runAllButtonActionPerformed
         
-        // Add all processor configurations to run queue.
-        int availableProcs = Runtime.getRuntime().availableProcessors();
-        for (int i = 1; i < availableProcs; i++) {
-            runPluginList.add(i);
+        if (plugin != null) {
+            
+             // Add all processor configurations to run queue.
+            int availableProcs = Runtime.getRuntime().availableProcessors();
+            runPluginList.clear();
+            for (int i = 1; i <= availableProcs; i++) {
+                runPluginList.add(i);
+            }
+            runNext();
         }
     }//GEN-LAST:event_runAllButtonActionPerformed
 
