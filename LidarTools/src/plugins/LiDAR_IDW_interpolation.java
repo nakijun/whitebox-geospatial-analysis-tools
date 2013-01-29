@@ -248,7 +248,7 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
             return;
         }
         
-        //int threads = Runtime.getRuntime().availableProcessors();
+        //int threads = Parallel.getPluginProcessors();
         int threads = Parallel.getPluginProcessors();
         System.out.println("Number of threads: " + threads);
         ExecutorService pool = Executors.newFixedThreadPool(threads);

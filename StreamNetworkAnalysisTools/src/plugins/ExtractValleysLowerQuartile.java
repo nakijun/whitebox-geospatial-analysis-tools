@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
+import whitebox.parallel.Parallel;
 
 /**
  * WhiteboxPlugin is used to define a plugin tool for Whitebox GIS.
@@ -206,7 +207,7 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                 filterSize++;
             }
             
-            int threads = Runtime.getRuntime().availableProcessors();
+            int threads = Parallel.getPluginProcessors();
             // TODO: remove after testing is done
             System.out.println("Number of threads" + threads);
         

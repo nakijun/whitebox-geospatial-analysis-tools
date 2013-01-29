@@ -17,10 +17,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
-import javax.swing.JToggleButton;
-import javax.swing.JToggleButton.ToggleButtonModel;
 import javax.swing.SwingUtilities;
-import javax.swing.plaf.basic.BasicBorders;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
 import whitebox.parallel.Parallel;
@@ -84,7 +81,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         
         // This is the platform-specific max. no. of available processors that
         // we need to account for.
-        int nprocs = Runtime.getRuntime().availableProcessors();
+        int nprocs = Parallel.getPluginProcessors();
         
         int n = 0;
         for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
@@ -222,17 +219,15 @@ public class TimingProfiler extends javax.swing.JFrame {
     
     /**
      * Runs the next configuration pending if it exists. Used to facilitate the
-     * run all processor configurations button.
+     * run all thread count configurations button.
      */
-    public void runNext() {
+    private void runNext() {
                 // If there are most configurations to run, start the next one.
         if (!runPluginList.isEmpty()) {
             int nextProcs = runPluginList.remove(0);
             setSelectedProcessors(nextProcs);
             Parallel.setPluginProcessors(nextProcs);
             host.runPlugin(plugin.getName(), pluginArgs);
-        } else {
-            log.append(System.lineSeparator() + "Batch operation finished." + System.lineSeparator());
         }
     }
     
@@ -755,6 +750,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     }//GEN-LAST:event_rerunToolButtonActionPerformed
 
     private void closeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeButtonActionPerformed
+        runPluginList.clear();
         this.dispose();
     }//GEN-LAST:event_closeButtonActionPerformed
 
@@ -808,7 +804,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         if (plugin != null) {
             
              // Add all processor configurations to run queue.
-            int availableProcs = Runtime.getRuntime().availableProcessors();
+            int availableProcs = Parallel.getPluginProcessors();
             runPluginList.clear();
             for (int i = 1; i <= availableProcs; i++) {
                 runPluginList.add(i);
