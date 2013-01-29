@@ -81,7 +81,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         
         // This is the platform-specific max. no. of available processors that
         // we need to account for.
-        int nprocs = Parallel.getPluginProcessors();
+        int nprocs = Runtime.getRuntime().availableProcessors();
         
         int n = 0;
         for (Enumeration<AbstractButton> bg = selectProcsGrp.getElements(); bg.hasMoreElements(); ) {
@@ -804,7 +804,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         if (plugin != null) {
             
              // Add all processor configurations to run queue.
-            int availableProcs = Parallel.getPluginProcessors();
+            int availableProcs = Runtime.getRuntime().availableProcessors();
             runPluginList.clear();
             for (int i = 1; i <= availableProcs; i++) {
                 runPluginList.add(i);
