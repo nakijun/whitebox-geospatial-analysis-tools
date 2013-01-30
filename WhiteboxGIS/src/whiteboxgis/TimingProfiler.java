@@ -7,6 +7,7 @@ package whiteboxgis;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -784,17 +785,17 @@ public class TimingProfiler extends javax.swing.JFrame {
                 if (!selection.exists()) {
                     selection.createNewFile();
                 }
-            } catch (Exception e) {
+                
+                String logText = log.getText();
+                // try with resource, it will close on good or bad result
+                // BufferedWriter needs a size > 0, adding 1 to prevent exception
+                try (BufferedWriter bf = new BufferedWriter(new FileWriter(selection), logText.getBytes().length + 1)) {
+                    bf.append(logText);
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(this, "Unable to save file", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, "Unable to create new file: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-            
-            String logText = log.getText();
-            // try with resource, it will close on good or bad result
-            // BufferedWriter needs a size > 0, adding 1 to prevent exception
-            try (BufferedWriter bf = new BufferedWriter(new FileWriter(selection), logText.getBytes().length + 1)) {
-                bf.append(logText);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Unable to save file", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }//GEN-LAST:event_saveLogToFileButtonActionPerformed

@@ -32,6 +32,7 @@ import whitebox.geospatialfiles.LASReader.PointRecord;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
+import whitebox.parallel.Parallel;
 import whitebox.structures.KdTree;
 
 /**
