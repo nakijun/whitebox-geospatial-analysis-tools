@@ -124,12 +124,12 @@ public class TimingProfiler extends javax.swing.JFrame {
     private int getSelectedProcessors() {
                 
         // find which radio button is currently clicked
-        int n = 0;
+        int n = 1;
         try {
             for (Enumeration<AbstractButton> btns = selectProcsGrp.getElements(); btns.hasMoreElements(); ) {
                 JRadioButton radioBtn = (JRadioButton)btns.nextElement();
                 if (radioBtn.isSelected()) {
-                    n = Integer.parseInt(radioBtn.getActionCommand());
+                    n = Integer.parseInt(radioBtn.getActionCommand().trim());
                     break;
                 }
             }
@@ -483,6 +483,7 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn9);
         procBtn9.setText("9  ");
+        procBtn9.setActionCommand("9");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 1;
