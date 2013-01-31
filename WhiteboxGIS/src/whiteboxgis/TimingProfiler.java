@@ -34,7 +34,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     // This describes the tool currently being timed
     WhiteboxPlugin plugin;
     String[] pluginArgs;
-    long pluginStart;   // nanosecs
+    long pluginStart = 0;   // nanosecs
     
     List<Integer> runPluginList = new LinkedList();
     
@@ -178,6 +178,11 @@ public class TimingProfiler extends javax.swing.JFrame {
      * @param nanosecs Wallclock execution time of plugin in nanoseconds.
      */
     public void stopTiming() {
+        
+        if (pluginStart == 0) {
+            // We never started the timing for this plugin, stop now
+            return;
+        }
         
         long execTime = System.nanoTime() - pluginStart;
         float execSecs = (float) ((float)(execTime/100000000)/10.0);
