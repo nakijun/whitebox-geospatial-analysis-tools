@@ -231,13 +231,31 @@ public class AttributeTable {
      * @throws DBFException 
      */
     public void addField(DBFField field) throws DBFException {
+        addField(field, this.fieldCount);
+    }
+    
+    /**
+     * Adds a DBFField after the specified index.
+     * Index 0 specifies before the first field and index {@link fieldCount}
+     * specifies after the last field.
+     * @param field. An initialized DBFField object.
+     * @param insertAfter. The index to insert field.
+     * @throws DBFException 
+     */
+    public void addField(DBFField field, int insertAfter) throws DBFException {
+        
+        if (field == null) {
+            throw new DBFException("New field name is empty");
+        } else if (insertAfter < 0 || insertAfter > this.fieldCount) {
+            throw new DBFException("Param insertAfter is out of table range");
+        } else if (this.fileName.isEmpty()) {
+            throw new DBFException("DBF file name not specified");
+        } else if (!(new File(this.fileName).exists())) {
+            throw new DBFException("DBF file does not exist");
+        }
+        
         try {
-            if (this.fileName.isEmpty()) {
-                throw new DBFException("DBF file name not specified");
-            }
-            if (!(new File(this.fileName).exists())) {
-                throw new DBFException("DBF file does not exist");
-            }
+
             // create a temporary file to house the new dbf
             String fileNameCopy = this.fileName.replace(".dbf", "_copy.dbf");
             if (new File(fileNameCopy).exists()) {
@@ -245,13 +263,20 @@ public class AttributeTable {
             }
             DBFField[] outFields = new DBFField[this.fieldCount + 1];
             DBFField[] inFields = getAllFields();
-            System.arraycopy(inFields, 0, outFields, 0, this.fieldCount);
             
-            outFields[this.fieldCount] = field;
+            // Copy all fields before insertAfter            
+            System.arraycopy(inFields, 0, outFields, 0, insertAfter);
+            
+            // Copy new field
+            outFields[insertAfter] = field;           
+            
+            // If we're not at the end, copy the rest of the fields
+            if (insertAfter < this.fieldCount) {
+                System.arraycopy(inFields, insertAfter, outFields, insertAfter + 1, this.fieldCount - insertAfter);
+            }
+            
             AttributeTable newTable = new AttributeTable(fileNameCopy, outFields); // used to set up the dbf copy
 
-            //DBFReader reader = new DBFReader(fileName);
-            //DBFWriter writer = new DBFWriter(fileNameCopy);
             for (int a = 0; a < this.numberOfRecords; a++) {
                 Object[] inRec = getRecord(a);
                 Object[] outRec = new Object[this.fieldCount + 1];
@@ -261,19 +286,23 @@ public class AttributeTable {
             
             newTable.write();
             
-            new File(this.fileName).delete();
-            FileUtilities.copyFile(new File(fileNameCopy), new File(this.fileName));
-            new File(fileNameCopy).delete();
-            
-            initialize();
-                    
+            File oldFile = new File(this.fileName);
+            // Rename old file in casenew File(oldFile.getPath().concat(".bak")) something horrible happens
+            if (oldFile.renameTo(new File(this.fileName.concat(".bak")))) {
+                
+                File newFile = new File(fileNameCopy);
+                // Rename new file to old file's name
+                if (newFile.renameTo(new File(this.fileName))) {
+                    // Delete the backup for oldFile
+                    new File(this.fileName.concat(".bak")).delete();
+
+                    initialize();
+                }
+            }
+
         } catch (Exception e) {
             throw new DBFException(e.getMessage());
         }
-    }
-    
-    public void addField(DBFField field, int insertAfter) {
-        
     }
     
     public void deleteField(int fieldNum) {
@@ -860,8 +889,17 @@ public class AttributeTable {
         }
     }
     
-    public void deleteRecord(int recordNumber) {
+    /**
+     * Removes the record of index recordNumber from the record data.
+     * @param recordNumber. Index of record to remove
+     * @throws DBFException
+     */
+    public void deleteRecord(int recordNumber) throws DBFException {
+        if (recordNumber < 0 || recordNumber > recordData.size()) {
+            throw new DBFException("Record number outside of file range.");
+        }
         
+        recordData.remove(recordNumber);
     }
     
     // private methods

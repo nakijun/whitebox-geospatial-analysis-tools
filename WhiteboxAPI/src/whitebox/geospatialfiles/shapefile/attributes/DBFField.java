@@ -12,6 +12,7 @@ $Id: DBFField.java,v 1.7 2004/03/31 10:50:11 anil Exp $
 package whitebox.geospatialfiles.shapefile.attributes;
 
 import java.io.*;
+import java.util.Arrays;
 
 /**
 DBFField represents a field specification in an dbf file.
@@ -207,8 +208,16 @@ public class DBFField {
 
             throw new IllegalArgumentException("Field name should be of length 0-10");
         }
+        
+        // Always use full 11 bytes for name
+        // Copy each byte into fieldName
+        this.fieldName = new byte[11];
+        int i = 0;
+        for (byte b : value.getBytes()) {
+            this.fieldName[i] = b;
+            i++;
+        }
 
-        this.fieldName = value.getBytes();
         this.nameNullIndex = this.fieldName.length;
     }
 
@@ -279,5 +288,40 @@ public class DBFField {
         }
 
         decimalCount = (byte) value;
+    }
+    
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 37 * hash + Arrays.hashCode(this.fieldName);
+        hash = 37 * hash + this.dataType;
+        hash = 37 * hash + this.fieldLength;
+        hash = 37 * hash + this.decimalCount;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final DBFField other = (DBFField) obj;
+
+        if (!Arrays.equals(this.fieldName, other.fieldName)) {
+            return false;
+        }
+        if (this.dataType != other.dataType) {
+            return false;
+        }
+        if (this.fieldLength != other.fieldLength) {
+            return false;
+        }
+        if (this.decimalCount != other.decimalCount) {
+            return false;
+        }
+        return true;
     }
 }
