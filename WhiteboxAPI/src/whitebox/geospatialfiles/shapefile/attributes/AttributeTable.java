@@ -927,7 +927,7 @@ public class AttributeTable {
      * @throws DBFException
      */
     public void deleteRecord(int recordNumber) throws DBFException {
-        if (recordNumber < 0 || recordNumber > recordData.size()) {
+        if (recordNumber < 0 || recordNumber >= recordData.size()) {
             throw new DBFException("Record number outside of file range.");
         }
         

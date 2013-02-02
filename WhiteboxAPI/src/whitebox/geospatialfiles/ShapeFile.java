@@ -147,7 +147,7 @@ public class ShapeFile {
         this.numRecs = 0;
         deleteFiles();
         try {
-            this.attributeTable = new AttributeTable(databaseFile, fields);
+            this.attributeTable = new AttributeTable(databaseFile, fields, false);
         } catch (Exception e) {
             // do nothing
         }
