@@ -232,7 +232,6 @@ public class AttributeTableTest {
             int insertAfter = 0;
 
             AttributeTable instance = new AttributeTable("test.dbf", new DBFField[] { field1 });
-            DBFField[] beforeFields = instance.getAllFields();
 
             DBFField field2 = new DBFField();
             field2.setName("test2");
@@ -242,6 +241,7 @@ public class AttributeTableTest {
             assertArrayEquals(new DBFField[] { field2, field1 }, instance.getAllFields());
         } finally {
             new File("test.dbf").delete();
+            new File("test_copy.dbf").delete();
         }
     }
 

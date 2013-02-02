@@ -24,8 +24,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.ArrayList;
-import whitebox.utilities.FileUtilities;
-
 /**
  *
  * @author johnlindsay
@@ -66,13 +64,37 @@ public class AttributeTable {
         
         this.fileName = fileName;
         try {
-            DBFWriter writer = new DBFWriter(new File(fileName));
-            writer.setFields(fields);
-            writer.write();
-            //setFields(fields);
+            createDBFFile(new File(fileName));
+            setFields(fields);
+            write();
             initialize();
         } catch (Exception e) {
-            
+        }
+    }
+    
+    /**
+     * Verifies the existence of or creates a valid DBF file on disk which can
+     * then have fields and records added or removed.
+     *
+     * @param dbfFile. The file passed in should be a valid DBF file or non-existent.
+     * @exception Throws DBFException if the passed in file does exist but not a
+     * valid DBF file, or if an IO error occurs.
+     */
+    private void createDBFFile(File dbfFile) throws DBFException {
+        
+        try (RandomAccessFile raf = new RandomAccessFile(dbfFile, "rw")) {
+
+            if (dbfFile.length() == 0) {
+                writeHeader(raf);
+            } else {
+                readHeader();
+            }
+        } catch (FileNotFoundException e) {
+
+            throw new DBFException("Specified file is not found. " + e.getMessage());
+        } catch (IOException e) {
+
+            throw new DBFException(e.getMessage() + " while reading header");
         }
     }
     
@@ -1024,21 +1046,12 @@ public class AttributeTable {
             
         } catch (IOException e) {
             throw new DBFException(e.getMessage());
-        }// finally {
-//            isDirty = true;
-//            if (raf != null) {
-//                try {
-//                    raf.close();
-//                } catch (Exception e) {
-//                }
-//            }
-//        }
+        }
     }
     
-    public void write() throws DBFException {
-        RandomAccessFile raf = null;
-        try {
-            raf = new RandomAccessFile(this.fileName, "rw");
+    public final void write() throws DBFException {
+
+        try (RandomAccessFile raf = new RandomAccessFile(this.fileName, "rw")) {
             
             if (!recordData.isEmpty()) {
                 for (int i = 0; i < recordData.size(); i++) {
@@ -1047,7 +1060,6 @@ public class AttributeTable {
                 }
                 
                 recordData.clear();
-                
             }
             
             // update the file header
@@ -1056,14 +1068,6 @@ public class AttributeTable {
             isDirty = false;
         } catch (IOException e) {
             throw new DBFException(e.getMessage());
-        } finally {
-            isDirty = true;
-            if (raf != null) {
-                try {
-                    raf.close();
-                } catch (Exception e) {
-                }
-            }
         }
     }
     
@@ -1169,9 +1173,11 @@ public class AttributeTable {
         raf.writeByte(languageDriver); /* 29 */
         raf.writeShort(Utils.littleEndian(reserv4)); /* 30-31 */
 
-        for (int i = 0; i < fieldArray.length; i++) {
+        if (fieldArray != null) {
+            for (int i = 0; i < fieldArray.length; i++) {
 
-            fieldArray[i].write(raf);
+                fieldArray[i].write(raf);
+            }
         }
 
         raf.writeByte(terminator1); /* n+1 */
@@ -1182,6 +1188,7 @@ public class AttributeTable {
 
     private short findHeaderLength() {
 
+        int nfields = fieldArray == null ? 0 : fieldArray.length;
         return (short) (1
                 + 3
                 + 4
@@ -1196,11 +1203,15 @@ public class AttributeTable {
                 + 1
                 + 1
                 + 2
-                + (32 * fieldArray.length)
+                + (32 * nfields)
                 + 1);
     }
 
     private short findRecordLength() {
+        
+        if (fieldArray == null) {
+            return 0;
+        }
 
         int recordLength = 0;
         for (int i = 0; i < fieldArray.length; i++) {
