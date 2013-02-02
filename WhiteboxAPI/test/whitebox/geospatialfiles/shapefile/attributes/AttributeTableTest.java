@@ -231,7 +231,7 @@ public class AttributeTableTest {
             field1.setDataType((byte)'N');
             int insertAfter = 0;
 
-            AttributeTable instance = new AttributeTable("test.dbf", new DBFField[] { field1 });
+            AttributeTable instance = new AttributeTable("test.dbf", new DBFField[] { field1 }, true);
 
             DBFField field2 = new DBFField();
             field2.setName("test2");
@@ -240,8 +240,8 @@ public class AttributeTableTest {
 
             assertArrayEquals(new DBFField[] { field2, field1 }, instance.getAllFields());
         } finally {
-            new File("test.dbf").delete();
-            new File("test_copy.dbf").delete();
+            //new File("test.dbf").delete();
+            //new File("test_copy.dbf").delete();
         }
     }
 

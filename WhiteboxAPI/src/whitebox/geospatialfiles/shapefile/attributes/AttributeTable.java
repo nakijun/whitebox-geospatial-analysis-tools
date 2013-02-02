@@ -57,14 +57,15 @@ public class AttributeTable {
      * not contain any records.
      * @param fileName  String containing the full file name and directory.
      * @param fields Array of DBFField type.
+     * @param destroy Option to destroy an existing DBF file.
      */
-    public AttributeTable(String fileName, DBFField[] fields) {
+    public AttributeTable(String fileName, DBFField[] fields, boolean destroy) {
         this.signature = SIG_DBASE_III;
         this.terminator1 = 0x0D;
         
         this.fileName = fileName;
         try {
-            createDBFFile(new File(fileName));
+            createDBFFile(new File(fileName), destroy);
             setFields(fields);
             write();
             initialize();
@@ -80,7 +81,16 @@ public class AttributeTable {
      * @exception Throws DBFException if the passed in file does exist but not a
      * valid DBF file, or if an IO error occurs.
      */
-    private void createDBFFile(File dbfFile) throws DBFException {
+    private void createDBFFile(File dbfFile, boolean destroy) throws DBFException {
+        
+        if (destroy == true) {
+            if (dbfFile.exists()) {
+                try {
+                    dbfFile.delete();
+                } catch (Exception e) {
+                }
+            }
+        }
         
         try (RandomAccessFile raf = new RandomAccessFile(dbfFile, "rw")) {
 
@@ -211,7 +221,7 @@ public class AttributeTable {
     }
     
     /**
-     * Sets fields.
+     * Sets fields for new files only.
      */
     public final void setFields(DBFField[] fields)
             throws DBFException {
@@ -297,7 +307,7 @@ public class AttributeTable {
                 System.arraycopy(inFields, insertAfter, outFields, insertAfter + 1, this.fieldCount - insertAfter);
             }
             
-            AttributeTable newTable = new AttributeTable(fileNameCopy, outFields); // used to set up the dbf copy
+            AttributeTable newTable = new AttributeTable(fileNameCopy, outFields, true); // used to set up the dbf copy
 
             for (int a = 0; a < this.numberOfRecords; a++) {
                 Object[] inRec = getRecord(a);
