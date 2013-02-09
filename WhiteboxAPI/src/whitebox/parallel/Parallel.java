@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class Parallel {
 
-    static int iCPU = Parallel.getPluginProcessors();
+    static int iCPU = Runtime.getRuntime().availableProcessors();
 
     /*
      * The get method is for plugins with adjustable parallelism to find the
