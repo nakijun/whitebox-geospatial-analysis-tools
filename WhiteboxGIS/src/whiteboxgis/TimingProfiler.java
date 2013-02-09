@@ -775,8 +775,8 @@ public class TimingProfiler extends javax.swing.JFrame {
 
     private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
         
-        for (int i = 0; i < visibleFields; i++) {
-            log.append(i + " : " + fields.get(i).getText() + System.lineSeparator());
+        for (int i = 1; i < visibleFields; i++) {
+            log.append(i + " : " + fields.get(i-1).getText() + System.lineSeparator());
         }
     }//GEN-LAST:event_copyToLogButtonActionPerformed
 
