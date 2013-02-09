@@ -5,8 +5,12 @@
 package whitebox.geospatialfiles.shapefile.attributes;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -19,8 +23,15 @@ import static org.junit.Assert.*;
  * @author Kevin Green
  */
 public class AttributeTableTest {
-    
+
+    Path tmpDir;
     public AttributeTableTest() {
+        try {
+           tmpDir = Files.createTempDirectory("testTempDir", new FileAttribute[0]) ;
+
+        } catch (IOException e) {
+            
+        }
     }
     
     @BeforeClass
@@ -222,26 +233,57 @@ public class AttributeTableTest {
      * Test of addField method, of class AttributeTable.
      */
     @Test
-    public void testAddField_DBFField_int() throws Exception {
+    public void testAddField_DBFField_int_validLocation() throws Exception {
         
+        String testFileName = tmpDir + File.separator + "test.dbf";
         try {
             System.out.println("addField");
             DBFField field1 = new DBFField();
             field1.setName("test1");
             field1.setDataType((byte)'N');
-            int insertAfter = 0;
 
-            AttributeTable instance = new AttributeTable("test.dbf", new DBFField[] { field1 }, true);
+
+            AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1 }, true);
 
             DBFField field2 = new DBFField();
             field2.setName("test2");
             field2.setDataType((byte)'N');
-            instance.addField(field2, insertAfter);
+            int insertAt = 0;
+            instance.addField(field2, insertAt);
 
             assertArrayEquals(new DBFField[] { field2, field1 }, instance.getAllFields());
         } finally {
-            //new File("test.dbf").delete();
-            //new File("test_copy.dbf").delete();
+            new File(testFileName).delete();
+        }
+    }
+    
+    /**
+     * Test of addField method, of class AttributeTable.
+     */
+    @Test
+    public void testAddField_DBFField_int_invalidLocation() throws Exception {
+        
+        String testFileName = tmpDir + File.separator + "test.dbf";
+        try {
+            System.out.println("addField");
+            DBFField field1 = new DBFField();
+            field1.setName("test1");
+            field1.setDataType((byte)'N');
+
+
+            AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1 }, true);
+
+            DBFField field2 = new DBFField();
+            field2.setName("test2");
+            field2.setDataType((byte)'N');
+            int insertAt = -1;
+            instance.addField(field2, insertAt);
+
+            fail("Method failed to throw on invalid index");
+        } catch (Exception e) {
+            assertTrue(e instanceof DBFException);
+        } finally {
+            new File(testFileName).delete();
         }
     }
 
@@ -249,26 +291,116 @@ public class AttributeTableTest {
      * Test of deleteField method, of class AttributeTable.
      */
     @Test
-    public void testDeleteField_int() {
+    public void testDeleteField_int_inBounds() throws Exception {
         System.out.println("deleteField");
-        int fieldNum = 0;
-        AttributeTable instance = null;
-        instance.deleteField(fieldNum);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        
+        String testFileName = tmpDir + File.separator + "test.dbf";
+        try {
+            DBFField field1 = new DBFField();
+            field1.setName("test1");
+            field1.setDataType((byte)'N');
+            DBFField field2 = new DBFField();
+            field2.setName("test2");
+            field2.setDataType((byte)'N');
+
+            AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
+
+            int deleteIndex = 0;
+            
+            instance.deleteField(deleteIndex);
+
+            assertArrayEquals(new DBFField[] { field2 }, instance.getAllFields());
+        } finally {
+            new File(testFileName).delete();
+        }
+
+    }
+    
+        /**
+     * Test of deleteField method, of class AttributeTable.
+     */
+    @Test
+    public void testDeleteField_int_outOfBounds() throws Exception {
+        System.out.println("deleteField");
+        
+        String testFileName = tmpDir + File.separator + "test.dbf";
+        try {
+            DBFField field1 = new DBFField();
+            field1.setName("test1");
+            field1.setDataType((byte)'N');
+            DBFField field2 = new DBFField();
+            field2.setName("test2");
+            field2.setDataType((byte)'N');
+
+            AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
+
+            int deleteIndex = 2;
+            
+            instance.deleteField(deleteIndex);
+
+            fail("deleteField failed to catch out of bounds");
+        } catch (Exception e) {
+            assertTrue(e instanceof DBFException);
+        } finally {
+            new File(testFileName).delete();
+        }
+
     }
 
     /**
      * Test of deleteField method, of class AttributeTable.
      */
     @Test
-    public void testDeleteField_String() {
+    public void testDeleteField_String_nameInTable() throws Exception {
         System.out.println("deleteField");
-        String fieldName = "";
-        AttributeTable instance = null;
-        instance.deleteField(fieldName);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        
+        String testFileName = tmpDir + File.separator + "test.dbf";
+        try {
+            DBFField field1 = new DBFField();
+            String deleteName = "test1";
+            field1.setName(deleteName);
+            field1.setDataType((byte)'N');
+            
+            DBFField field2 = new DBFField();
+            field2.setName("test2");
+            field2.setDataType((byte)'N');
+
+            AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
+
+            instance.deleteField(deleteName);
+
+            assertArrayEquals(new DBFField[] { field2 }, instance.getAllFields());
+        } finally {
+            new File(testFileName).delete();
+        }
+    }
+    
+        /**
+     * Test of deleteField method, of class AttributeTable.
+     */
+    @Test
+    public void testDeleteField_String_nameNotInTable() throws Exception {
+        System.out.println("deleteField");
+        
+        String testFileName = tmpDir + File.separator + "test.dbf";
+        try {
+            DBFField field1 = new DBFField();
+            String deleteName = "test1";
+            field1.setName(deleteName);
+            field1.setDataType((byte)'N');
+            
+            DBFField field2 = new DBFField();
+            field2.setName("test2");
+            field2.setDataType((byte)'N');
+
+            AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
+
+            instance.deleteField(deleteName + "asdf");
+
+            assertArrayEquals(new DBFField[] { field1, field2 }, instance.getAllFields());
+        } finally {
+            new File(testFileName).delete();
+        }
     }
 
     /**

@@ -19,16 +19,8 @@ package whiteboxgis;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
 import java.io.File;
-import java.io.IOException;
 import javax.swing.*;
-
-import java.text.Format;
-import java.text.SimpleDateFormat;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ArrayList;
 
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
@@ -49,7 +41,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private String dbfFileName = "";
     private String shapeFileName = "";
-    private DBFReader dbfReader;
+
     private AttributeTable attTable;
     //private JButton edit = new JButton("Edit");
     private JButton close = new JButton("Close");
@@ -77,10 +69,12 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         } else if (shapeFileName.toLowerCase().contains(".dbf")) {
             dbfFileName = shapeFileName;
         }
+        
         attTable = new AttributeTable(dbfFileName);
-        try {
-            dbfReader = new DBFReader(dbfFileName);
-        } catch (DBFException dbfe) {
+
+        if (attTable.isInitialized()) {
+            createGui();
+        } else {
             if (owner instanceof WhiteboxPluginHost) {
                 WhiteboxPluginHost wph = (WhiteboxPluginHost)owner;
                 wph.showFeedback("DBF file not read properly. It is possible that there is no database file.");
@@ -89,7 +83,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 this.add(warning);
             }
         }
-        createGui();
+
     }
     
     private void createGui() {
@@ -138,7 +132,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             JPanel panel2 = new JPanel();
             panel2.setLayout(new BoxLayout(panel2, BoxLayout.Y_AXIS));
             
-            DBFField[] fields = dbfReader.getAllFields();
+            DBFField[] fields = attTable.getAllFields();
             int numColumns = 4;
             int numRows = fields.length;
             String[] columnHeaders = new String[]{"Name", "Type", "Length", "Precision"};
@@ -217,8 +211,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             //setSize(screenWidth / 2, screenHeight / 2);
             this.setLocation(screenWidth / 4, screenHeight / 4);
             
-            dbfReader = null;
-            
         } catch (DBFException dbfe) {
             System.out.println("DBF file not read properly.");
         } catch (Exception e) {
@@ -228,16 +220,16 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private JTable getDataTable() {
         try {
-            int numColumns = dbfReader.getFieldCount();
-            int numRows = dbfReader.getRecordCount();
-            String[] ch = dbfReader.getAttributeTableFieldNames();
+            int numColumns = attTable.getFieldCount();
+            int numRows = attTable.getNumberOfRecords();
+            String[] ch = attTable.getAttributeTableFieldNames();
             String[] columnHeaders = new String[numColumns + 1];
             columnHeaders[0] = "ID";
             System.arraycopy(ch, 0, columnHeaders, 1, numColumns);
             Object[] row;
             Object[][] data = new Object[numRows][numColumns + 1];
             int a = 0;
-            while ((row = dbfReader.nextRecord()) != null) {
+            while ((row = attTable.nextRecord()) != null) {
                 data[a][0] = String.valueOf(a);
                 System.arraycopy(row, 0, data[a], 1, numColumns);
                 a++;
@@ -329,7 +321,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         try {
             
             DBFField field = new DBFField();
-            field = new DBFField();
             field.setName("FID");
             field.setDataType(DBFField.FIELD_TYPE_N);
             field.setFieldLength(10);
