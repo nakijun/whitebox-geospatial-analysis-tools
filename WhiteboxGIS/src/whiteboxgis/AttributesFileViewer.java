@@ -323,6 +323,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 recData[recData.length - 1] = new Double(a);
                 attTable.updateRecord(a, recData);
             }
+            
+            attTableModel.fireTableStructureChanged();
             //dbfReader = new DBFReader(dbfFileName);
             //attTable = new AttributeTable(dbfFileName);
             //table = getDataTable();
