@@ -204,19 +204,6 @@ public class AttributeTableTest {
     }
 
     /**
-     * Test of setFields method, of class AttributeTable.
-     */
-    @Test
-    public void testSetFields() throws Exception {
-        System.out.println("setFields");
-        DBFField[] fields = null;
-        AttributeTable instance = null;
-        instance.setFields(fields);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
      * Test of addField method, of class AttributeTable.
      */
     @Test

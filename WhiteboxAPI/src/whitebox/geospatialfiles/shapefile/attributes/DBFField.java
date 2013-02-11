@@ -13,6 +13,7 @@ package whitebox.geospatialfiles.shapefile.attributes;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Calendar;
 
 /**
 DBFField represents a field specification in an dbf file.
@@ -153,7 +154,26 @@ public class DBFField {
 
         return dataType;
     }
-
+    
+    public Class<?> getEquivalentDataType() {
+        
+        switch (dataType) {
+            case 'C':
+                return String.class;
+            case 'D':
+                return Calendar.class;
+            case 'F':
+            case 'N':
+                return Double.class;
+            case 'L':
+                return Boolean.class;
+            case 'M':
+                return Object.class;
+        }
+        
+        return Object.class;
+    }
+    
     /**
     Returns field length.
     

@@ -190,8 +190,7 @@ public class AttributeTable {
         }
 
         if (this.fieldArray != null) {
-            fieldCount = this.fieldArray.length;
-            return fieldCount;
+            return this.fieldArray.length;
         }
 
         return -1;
@@ -222,7 +221,7 @@ public class AttributeTable {
     /**
      * Sets fields for new files only.
      */
-    public final void setFields(DBFField[] fields)
+    private void setFields(DBFField[] fields)
             throws DBFException {
 
         if (this.fieldArray != null) {

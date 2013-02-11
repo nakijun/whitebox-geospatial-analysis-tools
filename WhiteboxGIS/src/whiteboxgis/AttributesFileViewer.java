@@ -21,6 +21,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
@@ -43,6 +44,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private String shapeFileName = "";
 
     private AttributeTable attTable;
+    private AttributeFileTableModel attTableModel;
     //private JButton edit = new JButton("Edit");
     private JButton close = new JButton("Close");
     private JTable table = new JTable();
@@ -71,6 +73,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         }
         
         attTable = new AttributeTable(dbfFileName);
+        attTableModel = new AttributeFileTableModel(attTable);
 
         if (attTable.isInitialized()) {
             createGui();
@@ -220,22 +223,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private JTable getDataTable() {
         try {
-            int numColumns = attTable.getFieldCount();
-            int numRows = attTable.getNumberOfRecords();
-            String[] ch = attTable.getAttributeTableFieldNames();
-            String[] columnHeaders = new String[numColumns + 1];
-            columnHeaders[0] = "ID";
-            System.arraycopy(ch, 0, columnHeaders, 1, numColumns);
-            Object[] row;
-            Object[][] data = new Object[numRows][numColumns + 1];
-            int a = 0;
-            while ((row = attTable.nextRecord()) != null) {
-                data[a][0] = String.valueOf(a);
-                System.arraycopy(row, 0, data[a], 1, numColumns);
-                a++;
-            }
             
-            table = new JTable(data, columnHeaders) {
+            table = new JTable(attTableModel) {
 
                 @Override
                 public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
@@ -254,17 +243,19 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                     return comp;
                 }
             };
+            
+            table.setAutoCreateRowSorter(true);
 
             table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
             TableColumn column = null;
-            for (int i = 0; i <= numColumns; i++) {
+            
+            for (int i = 0; i < table.getColumnCount(); i++) {
                 column = table.getColumnModel().getColumn(i);
                 if (i == 0) {
                     column.setPreferredWidth(40);
                 } else {
                     column.setPreferredWidth(70);
                 }
-                
             }
             return table;
         } catch (Exception e) {
