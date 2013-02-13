@@ -209,7 +209,7 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
             
             int threads = Parallel.getPluginProcessors();
             // TODO: remove after testing is done
-            System.out.println("Number of threads" + threads);
+            System.out.println("Number of threads " + threads);
         
             ExecutorService pool = Executors.newFixedThreadPool(threads);
                        
@@ -403,7 +403,8 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
             noData = DEM.getNoDataValue();
             int row;
             int endRow = rows + startRow;
-            for ( row = startRow; row < endRow; row ++ ) {
+            int writeCount = 0; // Keeps track of where we're writing in the out file
+            for ( row = startRow; row < endRow; row++ ) {
                 //System.out.println(row);
                 for (col = 0; col < cols; col++) {
                     
@@ -430,24 +431,23 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                             Arrays.sort(data);
                             lowerQuartile = n / 4;
                             if (z <= data[lowerQuartile]) {
-                                rowOuts[col] = row;
-                                colOuts[col] = col;
-                                valueOuts[col] = 1;
+                                rowOuts[writeCount] = row;
+                                colOuts[writeCount] = col;
+                                valueOuts[writeCount] = 1;
+                                writeCount++;
                             }
                         }
 
                     } else {
-                        rowOuts[col] = row;
-                        colOuts[col] = col;
-                        valueOuts[col] = outputNoData;
+                        rowOuts[writeCount] = row;
+                        colOuts[writeCount] = col;
+                        valueOuts[writeCount] = outputNoData;
+                        writeCount++;
                     }
-                    
-                    
-                   
                 }
                 
                 synchronized(output) {
-                    for ( int j= 0; j < cols; j++ ) {
+                    for ( int j= 0; j < writeCount; j++ ) {
                         output.setValue(rowOuts[j], colOuts[j], valueOuts[j]);
                     }                
                 
