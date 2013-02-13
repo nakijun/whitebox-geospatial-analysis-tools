@@ -166,7 +166,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         this.pluginArgs = args;
         
         // force garbage collection so it doesn't occur during timing run
-        System.gc();
+        //System.gc();
         
         // very last thing, capture current time
         this.pluginStart = System.nanoTime();
@@ -283,6 +283,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField15 = new javax.swing.JTextField();
         procBtn16 = new javax.swing.JRadioButton();
         jTextField16 = new javax.swing.JTextField();
+        setProcessorsButton = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         copyToLogButton = new javax.swing.JButton();
         clearTimesButton = new javax.swing.JButton();
@@ -640,6 +641,17 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
         jPanel1.add(jTextField16, gridBagConstraints);
 
+        setProcessorsButton.setText("Set Processors");
+        setProcessorsButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                setProcessorsButtonActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 8;
+        gridBagConstraints.gridy = 7;
+        jPanel1.add(setProcessorsButton, gridBagConstraints);
+
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
@@ -820,6 +832,10 @@ public class TimingProfiler extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_runAllButtonActionPerformed
 
+    private void setProcessorsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setProcessorsButtonActionPerformed
+        Parallel.setPluginProcessors(getSelectedProcessors());
+    }//GEN-LAST:event_setProcessorsButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton clearLogButton;
@@ -871,5 +887,6 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JButton runAllButton;
     private javax.swing.JButton saveLogToFileButton;
     private javax.swing.ButtonGroup selectProcsGrp;
+    private javax.swing.JButton setProcessorsButton;
     // End of variables declaration//GEN-END:variables
 }
