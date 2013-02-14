@@ -444,7 +444,7 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                         valueOuts[writeCount] = outputNoData;
                         writeCount++;
                     }
-                }
+                } // for each col 
                 
                 synchronized(output) {
                     for ( int j= 0; j < writeCount; j++ ) {
@@ -459,10 +459,11 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
                     return;
                 }
                 
+                writeCount = 0;
                 progress++;
                 updateProgress((progress*100)/maxWork);
                 
-            }
+            } // for each row
             
         }
                 
