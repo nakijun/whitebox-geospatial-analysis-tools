@@ -316,7 +316,7 @@ public class AttributeTable {
             newTable.write();
             
             File oldFile = new File(this.fileName);
-            // Rename old file in casenew File(oldFile.getPath().concat(".bak")) something horrible happens
+            // Rename old file in case something horrible happens
             if (oldFile.renameTo(new File(this.fileName.concat(".bak")))) {
                 
                 File newFile = new File(fileNameCopy);
@@ -919,7 +919,6 @@ public class AttributeTable {
 
                             GregorianCalendar calendar = new GregorianCalendar();
                             calendar.setTime((Date) rowData[j]);
-                            StringBuffer t_sb = new StringBuffer();
                             buf.put(String.valueOf(calendar.get(Calendar.YEAR)).getBytes());
                             buf.put(Utils.textPadding(String.valueOf(calendar.get(Calendar.MONTH) + 1), this.characterSetName, 2, Utils.ALIGN_RIGHT, (byte) '0'));
                             buf.put(Utils.textPadding(String.valueOf(calendar.get(Calendar.DAY_OF_MONTH)), this.characterSetName, 2, Utils.ALIGN_RIGHT, (byte) '0'));
@@ -1006,7 +1005,7 @@ public class AttributeTable {
      */
     public void deleteRecord(int recordNumber) throws DBFException {
         if (recordNumber < 0 || recordNumber >= recordData.size()) {
-            throw new DBFException("Record number outside of file range.");
+            throw new DBFException("Record number outside of table range.");
         }
         
         recordData.remove(recordNumber);
