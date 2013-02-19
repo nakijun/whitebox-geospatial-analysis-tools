@@ -32,6 +32,7 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.geospatialfiles.shapefile.attributes.DBFReader;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
+import whitebox.geospatialfiles.shapefile.attributes.DBFField.DBFDataType;
 import whitebox.interfaces.WhiteboxPluginHost;
 
 /**
@@ -145,30 +146,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             for (int a = 0; a < numRows; a++) {
                 data[a][0] = fields[a].getName();
                 dataType = fields[a].getDataType();
-                switch (dataType) {
-                    case 'D':
-                        outputDataType = "Date";
-                        break;
-                    case 'C':
-                        outputDataType = "String";
-                        break;
-                    case 'L':
-                        outputDataType = "Boolean";
-                        break;
-                    case 'N':
-                        outputDataType = "Numeric";
-                        break;
-                    case 'F':
-                        outputDataType = "Float";
-                        break;
-                    case 'M':
-                        outputDataType = "Memo";
-                        break;
-                    default:
-                        outputDataType = "Unrecognized";
-                        break;
-                }
-                data[a][1] = outputDataType;
+                
+                data[a][1] = DBFDataType.getTypeBySymbol(dataType);
                 data[a][2] = fields[a].getFieldLength();
                 data[a][3] = fields[a].getDecimalCount();
             }
@@ -192,6 +171,13 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                     return comp;
                 }
             };
+            
+            TableColumn typeColumn = fieldTable.getColumnModel().getColumn(1);
+            JComboBox typeComboBox = new JComboBox();
+            for (DBFDataType type : DBFDataType.values()) {
+                typeComboBox.addItem(type);
+            }
+            typeColumn.setCellEditor(new DefaultCellEditor(typeComboBox));
             
             JScrollPane scroll2 = new JScrollPane(fieldTable);
             panel2.add(scroll2);
@@ -245,7 +231,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             };
             
             table.setAutoCreateRowSorter(true);
-
             table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
             TableColumn column = null;
             

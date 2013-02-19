@@ -42,8 +42,6 @@ public class AttributeFileTableModel extends AbstractTableModel {
         return true;
     }
     
-    
-    
     @Override
     public int getRowCount() {
         return table.getNumberOfRecords();
@@ -130,29 +128,6 @@ public class AttributeFileTableModel extends AbstractTableModel {
             Object[] row = table.getRecord(rowIndex);
             
             if (row != null && row.length > fieldIndex) {
-                // Replace current value with aValue
-                
-                /*
-                if (aValue instanceof String) {
-                    String valStr = (String)aValue;
-                    
-                    // Convert val to type of existing data in row
-                    Object curVal = row[fieldIndex];
-                    Object newVal = null;
-                                        
-                    if (curVal instanceof Double) {
-                        newVal = Double.parseDouble(valStr);
-                    } else if (curVal instanceof Integer) {
-                        newVal = Integer.parseInt(valStr);
-                    } else if (curVal instanceof String) {
-                        newVal = valStr;
-                    }
-                    // String is fine as default
-
-                    row[fieldIndex] = newVal;
-                    table.updateRecord(rowIndex, row);
-                }*/
-                
                 row[fieldIndex] = aValue;
                 table.updateRecord(rowIndex, row);
 
