@@ -96,8 +96,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 this.getRootPane().putClientProperty("apple.awt.brushMetalLook", Boolean.TRUE);
             }
             
-            JPanel contentPanel = new JPanel();
-            
             File file = new File(dbfFileName);
             String shortFileName = file.getName();
             shortFileName = shortFileName.replace(".dbf", "");
@@ -141,13 +139,10 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             int numRows = fields.length;
             String[] columnHeaders = new String[]{"Name", "Type", "Length", "Precision"};
             Object[][] data = new Object[numRows][numColumns];
-            byte dataType = 0;
-            String outputDataType;
+
             for (int a = 0; a < numRows; a++) {
                 data[a][0] = fields[a].getName();
-                dataType = fields[a].getDataType();
-                
-                data[a][1] = DBFDataType.getTypeBySymbol(dataType);
+                data[a][1] = fields[a].getDataType();
                 data[a][2] = fields[a].getFieldLength();
                 data[a][3] = fields[a].getDecimalCount();
             }
@@ -298,7 +293,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             
             DBFField field = new DBFField();
             field.setName("FID");
-            field.setDataType(DBFField.FIELD_TYPE_N);
+            field.setDataType(DBFField.DBFDataType.Numeric);
             field.setFieldLength(10);
             field.setDecimalCount(0);
             attTable.addField(field);
@@ -338,7 +333,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             DBFField field = new DBFField();
             field = new DBFField();
             field.setName("Area");
-            field.setDataType(DBFField.FIELD_TYPE_N);
+            field.setDataType(DBFField.DBFDataType.Numeric);
             field.setFieldLength(10);
             field.setDecimalCount(3);
             this.shapeFile.attributeTable.addField(field);
@@ -401,7 +396,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             DBFField field = new DBFField();
             field = new DBFField();
             field.setName("Perimeter");
-            field.setDataType(DBFField.FIELD_TYPE_N);
+            field.setDataType(DBFField.DBFDataType.Numeric);
             field.setFieldLength(10);
             field.setDecimalCount(3);
             this.shapeFile.attributeTable.addField(field);

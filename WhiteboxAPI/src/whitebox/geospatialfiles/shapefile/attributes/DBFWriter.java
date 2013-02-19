@@ -212,38 +212,10 @@ public class DBFWriter extends DBFBase {
                 continue;
             }
 
-            switch (this.header.fieldArray[i].getDataType()) {
-
-                case 'C':
-                    if (!(values[i] instanceof String)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'L':
-                    if (!(values[i] instanceof Boolean)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'N':
-                    if (!(values[i] instanceof Double)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'D':
-                    if (!(values[i] instanceof Date)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'F':
-                    if (!(values[i] instanceof Double)) {
-
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
+            Class equivalentClass = this.header.fieldArray[i].getDataType().getEquivalentClass();
+            
+            if (!(values[i].getClass().equals(equivalentClass))) {
+                throw new DBFException("Invalid value for field " + i);
             }
         }
 
@@ -348,7 +320,7 @@ public class DBFWriter extends DBFBase {
 
                 switch (this.header.fieldArray[j].getDataType()) {
 
-                    case 'C':
+                    case String:
                         if (objectArray[j] != null) {
 
                             String str_value = objectArray[j].toString();
@@ -359,7 +331,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case 'D':
+                    case Date:
                         if (objectArray[j] != null) {
 
                             GregorianCalendar calendar = new GregorianCalendar();
@@ -375,7 +347,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case 'F':
+                    case Float:
 
                         if (objectArray[j] != null) {
 
@@ -387,7 +359,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case 'N':
+                    case Numeric:
 
                         if (objectArray[j] != null) {
 
@@ -400,7 +372,7 @@ public class DBFWriter extends DBFBase {
                         }
 
                         break;
-                    case 'L':
+                    case Boolean:
 
                         if (objectArray[j] != null) {
 
@@ -418,7 +390,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case 'M':
+                    case Memo:
 
                         break;
 
@@ -467,7 +439,7 @@ public class DBFWriter extends DBFBase {
 
             switch (this.header.fieldArray[j].getDataType()) {
 
-                case 'C':
+                case String:
                     if (objectArray[j] != null) {
 
                         String str_value = objectArray[j].toString();
@@ -479,7 +451,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case 'D':
+                case Date:
                     if (objectArray[j] != null) {
 
                         GregorianCalendar calendar = new GregorianCalendar();
@@ -495,7 +467,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case 'F':
+                case Float:
 
                     if (objectArray[j] != null) {
 
@@ -507,7 +479,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case 'N':
+                case Numeric:
 
                     if (objectArray[j] != null) {
 
@@ -520,7 +492,7 @@ public class DBFWriter extends DBFBase {
                     }
 
                     break;
-                case 'L':
+                case Boolean:
 
                     if (objectArray[j] != null) {
 
@@ -538,7 +510,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case 'M':
+                case Memo:
 
                     break;
 

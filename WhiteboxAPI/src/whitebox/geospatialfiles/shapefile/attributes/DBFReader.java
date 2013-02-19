@@ -414,7 +414,7 @@ public class DBFReader extends DBFBase {
 
                 switch (this.header.fieldArray[i].getDataType()) {
 
-                    case 'C':
+                    case String:
 
                         byte b_array[] = new byte[this.header.fieldArray[i].getFieldLength()];
                         //dataInputStream.read(b_array);
@@ -422,7 +422,7 @@ public class DBFReader extends DBFBase {
                         recordObjects[i] = new String(b_array, characterSetName);
                         break;
 
-                    case 'D':
+                    case Date:
 
                         byte t_byte_year[] = new byte[4];
                         //dataInputStream.read(t_byte_year);
@@ -454,7 +454,7 @@ public class DBFReader extends DBFBase {
 
                         break;
 
-                    case 'F':
+                    case Float:
 
                         try {
 
@@ -477,7 +477,7 @@ public class DBFReader extends DBFBase {
 
                         break;
 
-                    case 'N':
+                    case Numeric:
 
                         try {
 
@@ -501,7 +501,7 @@ public class DBFReader extends DBFBase {
 
                         break;
 
-                    case 'L':
+                    case Boolean:
 
                         byte t_logical = buf.get();
                         if (t_logical == 'Y' || t_logical == 't' || t_logical == 'T' || t_logical == 't') {
@@ -513,7 +513,7 @@ public class DBFReader extends DBFBase {
                         }
                         break;
 
-                    case 'M':
+                    case Memo:
                         // TODO Later
                         recordObjects[i] = new String("null");
                         break;
@@ -603,7 +603,7 @@ public class DBFReader extends DBFBase {
 
                     switch (this.header.fieldArray[i].getDataType()) {
 
-                        case 'C':
+                        case String:
 
                             byte b_array[] = new byte[this.header.fieldArray[i].getFieldLength()];
                             //dataInputStream.read(b_array);
@@ -611,7 +611,7 @@ public class DBFReader extends DBFBase {
                             recordObjects[i] = new String(b_array, characterSetName);
                             break;
 
-                        case 'D':
+                        case Date:
 
                             byte t_byte_year[] = new byte[4];
                             //dataInputStream.read(t_byte_year);
@@ -643,7 +643,7 @@ public class DBFReader extends DBFBase {
 
                             break;
 
-                        case 'F':
+                        case Float:
 
                             try {
 
@@ -666,7 +666,7 @@ public class DBFReader extends DBFBase {
 
                             break;
 
-                        case 'N':
+                        case Numeric:
 
                             try {
 
@@ -690,7 +690,7 @@ public class DBFReader extends DBFBase {
 
                             break;
 
-                        case 'L':
+                        case Boolean:
 
                             byte t_logical = buf.get();
                             if (t_logical == 'Y' || t_logical == 't' || t_logical == 'T' || t_logical == 't') {
@@ -702,7 +702,7 @@ public class DBFReader extends DBFBase {
                             }
                             break;
 
-                        case 'M':
+                        case Memo:
                             // TODO Later
                             recordObjects[i] = new String("null");
                             break;

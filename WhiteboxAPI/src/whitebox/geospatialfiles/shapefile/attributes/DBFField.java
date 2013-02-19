@@ -31,13 +31,12 @@ public class DBFField {
     public static final byte FIELD_TYPE_D = (byte) 'D';
     public static final byte FIELD_TYPE_M = (byte) 'M';
     
-    private DBFDataType fieldDataType;
-
     /* Field struct variables start here */
     byte[] fieldName = new byte[11]; /* 0-10*/
 
-    byte dataType;                    /* 11 */
-
+    //byte dataType;                    /* 11 */
+    private DBFDataType dataType;
+    
     int reserv1;                      /* 12-15 */
 
     int fieldLength;                 /* 16 */
@@ -94,8 +93,8 @@ public class DBFField {
             }
         }
 
-        field.dataType = in.readByte(); /* 11 */
-        field.fieldDataType = DBFDataType.getTypeBySymbol(field.dataType);
+        //field.dataType = in.readByte(); /* 11 */
+        field.dataType = DBFDataType.getTypeBySymbol(in.readByte());
         field.reserv1 = Utils.readLittleEndianInt(in); /* 12-15 */
         field.fieldLength = in.readUnsignedByte();  /* 16 */
         field.decimalCount = in.readByte(); /* 17 */
@@ -126,7 +125,7 @@ public class DBFField {
         out.write(new byte[11 - fieldName.length]);
 
         // data type
-        out.writeByte(dataType); /* 11 */
+        out.writeByte(dataType.symbol); /* 11 */
         out.writeInt(0x00);   /* 12-15 */
         out.writeByte(fieldLength); /* 16 */
         out.writeByte(decimalCount); /* 17 */
@@ -153,32 +152,9 @@ public class DBFField {
     
     @return Data type as byte.
      */
-    public byte getDataType() {
+    public DBFDataType getDataType() {
 
         return dataType;
-    }
-    
-    /**
-     * Returns a Java equivalent for the field.
-     * @return Class object
-     */
-    public Class<?> getEquivalentDataType() {
-        
-        switch (dataType) {
-            case 'C':
-                return String.class;
-            case 'D':
-                return Calendar.class;
-            case 'F':
-            case 'N':
-                return Double.class;
-            case 'L':
-                return Boolean.class;
-            case 'M':
-                return Object.class;
-        }
-        
-        return Object.class;
     }
     
     /**
@@ -247,31 +223,15 @@ public class DBFField {
 
         this.nameNullIndex = this.fieldName.length;
     }
-
+    
     /**
     Sets the data type of the field.
     
     @param type of the field. One of the following:<br>
-    C, L, N, F, D, M
+    String, Boolean, Numeric, Float, Date, Memo
      */
-    public void setDataType(byte value) {
-
-        switch (value) {
-
-            case 'D':
-                this.fieldLength = 8; /* fall through */
-            case 'C':
-            case 'L':
-            case 'N':
-            case 'F':
-            case 'M':
-
-                this.dataType = value;
-                break;
-
-            default:
-                throw new IllegalArgumentException("Unknown data type");
-        }
+    public void setDataType(DBFDataType value) {
+        this.dataType = value;
     }
 
     /**
@@ -287,7 +247,7 @@ public class DBFField {
             throw new IllegalArgumentException("Field length should be a positive number");
         }
 
-        if (this.dataType == FIELD_TYPE_D) {
+        if (this.dataType == DBFDataType.Date) {
 
             throw new UnsupportedOperationException("Cannot do this on a Date field");
         }
@@ -330,6 +290,10 @@ public class DBFField {
             this.symbol = symbol;
         }
         
+        public byte getSymbol() {
+            return this.symbol;
+        }
+        
         public static DBFDataType getTypeBySymbol(byte symbol) {
             for (DBFDataType type : DBFDataType.values()) {
                 if (type.symbol == symbol) {
@@ -340,7 +304,7 @@ public class DBFField {
             return null;
         }
         
-        public Class<?> getEquivalentDataType() {
+        public Class<?> getEquivalentClass() {
             switch (this) {
                 case String:
                     return String.class;
@@ -363,7 +327,7 @@ public class DBFField {
     public int hashCode() {
         int hash = 7;
         hash = 37 * hash + Arrays.hashCode(this.fieldName);
-        hash = 37 * hash + this.dataType;
+        hash = 37 * hash + this.dataType.symbol;
         hash = 37 * hash + this.fieldLength;
         hash = 37 * hash + this.decimalCount;
         return hash;

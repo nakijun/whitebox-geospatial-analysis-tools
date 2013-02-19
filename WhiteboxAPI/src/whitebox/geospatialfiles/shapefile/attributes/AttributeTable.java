@@ -469,7 +469,7 @@ public class AttributeTable {
 
                 switch (this.fieldArray[i].getDataType()) {
 
-                    case 'C':
+                    case String:
 
                         byte b_array[] = new byte[this.fieldArray[i].getFieldLength()];
                         //dataInputStream.read(b_array);
@@ -477,7 +477,7 @@ public class AttributeTable {
                         recordObjects[i] = new String(b_array, characterSetName);
                         break;
 
-                    case 'D':
+                    case Date:
 
                         byte t_byte_year[] = new byte[4];
                         //dataInputStream.read(t_byte_year);
@@ -509,7 +509,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'F':
+                    case Float:
 
                         try {
 
@@ -532,7 +532,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'N':
+                    case Numeric:
 
                         try {
 
@@ -556,7 +556,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'L':
+                    case Boolean:
 
                         byte t_logical = buf.get();
                         if (t_logical == 'Y' || t_logical == 't' || t_logical == 'T' || t_logical == 't') {
@@ -568,13 +568,13 @@ public class AttributeTable {
                         }
                         break;
 
-                    case 'M':
+                    case Memo:
                         // TODO Later
-                        recordObjects[i] = new String("null");
+                        recordObjects[i] = "null";
                         break;
 
                     default:
-                        recordObjects[i] = new String("null");
+                        recordObjects[i] = "null";
                 }
             }
         } catch (EOFException e) {
@@ -654,7 +654,7 @@ public class AttributeTable {
 
                     switch (this.fieldArray[i].getDataType()) {
 
-                        case 'C':
+                        case String:
 
                             byte b_array[] = new byte[this.fieldArray[i].getFieldLength()];
                             //dataInputStream.read(b_array);
@@ -662,7 +662,7 @@ public class AttributeTable {
                             recordObjects[i] = new String(b_array, characterSetName);
                             break;
 
-                        case 'D':
+                        case Date:
 
                             byte t_byte_year[] = new byte[4];
                             //dataInputStream.read(t_byte_year);
@@ -694,7 +694,7 @@ public class AttributeTable {
 
                             break;
 
-                        case 'F':
+                        case Float:
 
                             try {
 
@@ -717,7 +717,7 @@ public class AttributeTable {
 
                             break;
 
-                        case 'N':
+                        case Numeric:
 
                             try {
 
@@ -741,7 +741,7 @@ public class AttributeTable {
 
                             break;
 
-                        case 'L':
+                        case Boolean:
 
                             byte t_logical = buf.get();
                             if (t_logical == 'Y' || t_logical == 't' || t_logical == 'T' || t_logical == 't') {
@@ -753,7 +753,7 @@ public class AttributeTable {
                             }
                             break;
 
-                        case 'M':
+                        case Memo:
                             // TODO Later
                             recordObjects[i] = new String("null");
                             break;
@@ -834,40 +834,13 @@ public class AttributeTable {
                 // null values are not checked
                 continue;
             }
-
-            switch (this.fieldArray[i].getDataType()) {
-
-                case 'C':
-                    if (!(values[i] instanceof String)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'L':
-                    if (!(values[i] instanceof Boolean)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'N':
-                    if (!(values[i] instanceof Double)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'D':
-                    if (!(values[i] instanceof Date)) {
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
-
-                case 'F':
-                    if (!(values[i] instanceof Double)) {
-
-                        throw new DBFException("Invalid value for field " + i);
-                    }
-                    break;
+            
+            Class equivalentClass = this.fieldArray[i].getDataType().getEquivalentClass();
+            
+            if (!(values[i].getClass().equals(equivalentClass))) {
+                throw new DBFException("Invalid value for field " + i);
             }
+
         }
         
         recordData.add(values);
@@ -903,7 +876,7 @@ public class AttributeTable {
 
                 switch (this.fieldArray[j].getDataType()) {
 
-                    case 'C':
+                    case String:
                         if (rowData[j] != null) {
 
                             String str_value = rowData[j].toString();
@@ -914,7 +887,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'D':
+                    case Date:
                         if (rowData[j] != null) {
 
                             GregorianCalendar calendar = new GregorianCalendar();
@@ -929,7 +902,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'F':
+                    case Float:
 
                         if (rowData[j] != null) {
 
@@ -941,7 +914,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'N':
+                    case Numeric:
 
                         if (rowData[j] != null) {
 
@@ -954,7 +927,7 @@ public class AttributeTable {
                         }
 
                         break;
-                    case 'L':
+                    case Boolean:
 
                         if (rowData[j] != null) {
 
@@ -972,7 +945,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'M':
+                    case Memo:
 
                         break;
 
@@ -1045,7 +1018,7 @@ public class AttributeTable {
 
                 switch (this.fieldArray[j].getDataType()) {
 
-                    case 'C':
+                    case String:
                         if (values[j] != null) {
 
                             String str_value = values[j].toString();
@@ -1056,7 +1029,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'D':
+                    case Date:
                         if (values[j] != null) {
 
                             GregorianCalendar calendar = new GregorianCalendar();
@@ -1072,7 +1045,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'F':
+                    case Float:
 
                         if (values[j] != null) {
 
@@ -1084,7 +1057,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'N':
+                    case Numeric:
 
                         if (values[j] != null) {
 
@@ -1097,7 +1070,7 @@ public class AttributeTable {
                         }
 
                         break;
-                    case 'L':
+                    case Boolean:
 
                         if (values[j] != null) {
 
@@ -1115,7 +1088,7 @@ public class AttributeTable {
 
                         break;
 
-                    case 'M':
+                    case Memo:
 
                         break;
 

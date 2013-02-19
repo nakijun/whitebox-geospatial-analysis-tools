@@ -399,7 +399,7 @@ public class RelatedCircumscribingCircle implements WhiteboxPlugin {
             DBFField field = new DBFField();
             field = new DBFField();
             field.setName("RC_CIRCLE");
-            field.setDataType(DBFField.FIELD_TYPE_N);
+            field.setDataType(DBFField.DBFDataType.Numeric);
             field.setFieldLength(10);
             field.setDecimalCount(4);
             input.attributeTable.addField(field);

@@ -227,14 +227,14 @@ public class AttributeTableTest {
             System.out.println("addField");
             DBFField field1 = new DBFField();
             field1.setName("test1");
-            field1.setDataType((byte)'N');
+            field1.setDataType(DBFField.DBFDataType.Numeric);
 
 
             AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1 }, true);
 
             DBFField field2 = new DBFField();
             field2.setName("test2");
-            field2.setDataType((byte)'N');
+            field2.setDataType(DBFField.DBFDataType.Numeric);
             int insertAt = 0;
             instance.addField(field2, insertAt);
 
@@ -255,14 +255,14 @@ public class AttributeTableTest {
             System.out.println("addField");
             DBFField field1 = new DBFField();
             field1.setName("test1");
-            field1.setDataType((byte)'N');
+            field1.setDataType(DBFField.DBFDataType.Numeric);
 
 
             AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1 }, true);
 
             DBFField field2 = new DBFField();
             field2.setName("test2");
-            field2.setDataType((byte)'N');
+            field2.setDataType(DBFField.DBFDataType.Numeric);
             int insertAt = -1;
             instance.addField(field2, insertAt);
 
@@ -285,10 +285,10 @@ public class AttributeTableTest {
         try {
             DBFField field1 = new DBFField();
             field1.setName("test1");
-            field1.setDataType((byte)'N');
+            field1.setDataType(DBFField.DBFDataType.Numeric);
             DBFField field2 = new DBFField();
             field2.setName("test2");
-            field2.setDataType((byte)'N');
+            field2.setDataType(DBFField.DBFDataType.Numeric);
 
             AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
 
@@ -314,10 +314,10 @@ public class AttributeTableTest {
         try {
             DBFField field1 = new DBFField();
             field1.setName("test1");
-            field1.setDataType((byte)'N');
+            field1.setDataType(DBFField.DBFDataType.Numeric);
             DBFField field2 = new DBFField();
             field2.setName("test2");
-            field2.setDataType((byte)'N');
+            field2.setDataType(DBFField.DBFDataType.Numeric);
 
             AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
 
@@ -346,11 +346,11 @@ public class AttributeTableTest {
             DBFField field1 = new DBFField();
             String deleteName = "test1";
             field1.setName(deleteName);
-            field1.setDataType((byte)'N');
+            field1.setDataType(DBFField.DBFDataType.Numeric);
             
             DBFField field2 = new DBFField();
             field2.setName("test2");
-            field2.setDataType((byte)'N');
+            field2.setDataType(DBFField.DBFDataType.Numeric);
 
             AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
 
@@ -374,11 +374,11 @@ public class AttributeTableTest {
             DBFField field1 = new DBFField();
             String deleteName = "test1";
             field1.setName(deleteName);
-            field1.setDataType((byte)'N');
+            field1.setDataType(DBFField.DBFDataType.Numeric);
             
             DBFField field2 = new DBFField();
             field2.setName("test2");
-            field2.setDataType((byte)'N');
+            field2.setDataType(DBFField.DBFDataType.Numeric);
 
             AttributeTable instance = new AttributeTable(testFileName, new DBFField[] { field1, field2 }, true);
 

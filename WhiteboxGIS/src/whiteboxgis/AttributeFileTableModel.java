@@ -71,7 +71,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
         try {
             DBFField[] fields = table.getAllFields();
             
-            klass = fields[fieldIndex].getEquivalentDataType();
+            klass = fields[fieldIndex].getDataType().getEquivalentClass();
         } catch (DBFException e) {
             System.out.println(e.getMessage());
         }

@@ -470,7 +470,7 @@ public class VectorLayerInfo implements MapLayer {
                 int fieldNum = -1;
                 for (a = 0; a < fields.length; a++) {
                     if (fields[a].getName().equals(colouringAttribute)) {
-                        dataType = fields[a].getDataType();
+                        dataType = fields[a].getDataType().getSymbol();
                         fieldNum = a;
                         break;
                     }
