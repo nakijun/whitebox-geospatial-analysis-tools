@@ -30,6 +30,8 @@ public class DBFField {
     public static final byte FIELD_TYPE_F = (byte) 'F';
     public static final byte FIELD_TYPE_D = (byte) 'D';
     public static final byte FIELD_TYPE_M = (byte) 'M';
+    
+    private DBFDataType fieldDataType;
 
     /* Field struct variables start here */
     byte[] fieldName = new byte[11]; /* 0-10*/
@@ -93,6 +95,7 @@ public class DBFField {
         }
 
         field.dataType = in.readByte(); /* 11 */
+        field.fieldDataType = DBFDataType.getTypeBySymbol(field.dataType);
         field.reserv1 = Utils.readLittleEndianInt(in); /* 12-15 */
         field.fieldLength = in.readUnsignedByte();  /* 16 */
         field.decimalCount = in.readByte(); /* 17 */
@@ -155,6 +158,10 @@ public class DBFField {
         return dataType;
     }
     
+    /**
+     * Returns a Java equivalent for the field.
+     * @return Class object
+     */
     public Class<?> getEquivalentDataType() {
         
         switch (dataType) {
@@ -308,6 +315,48 @@ public class DBFField {
         }
 
         decimalCount = (byte) value;
+    }
+    
+    public enum DBFDataType {
+        Date((byte) 'D'), 
+        String((byte) 'C'), 
+        Boolean((byte) 'L'), 
+        Numeric((byte) 'N'), 
+        Float((byte) 'F'), 
+        Memo((byte) 'M');
+        
+        private byte symbol;
+        DBFDataType(byte symbol) {
+            this.symbol = symbol;
+        }
+        
+        public static DBFDataType getTypeBySymbol(byte symbol) {
+            for (DBFDataType type : DBFDataType.values()) {
+                if (type.symbol == symbol) {
+                    return type;
+                }
+            }
+            
+            return null;
+        }
+        
+        public Class<?> getEquivalentDataType() {
+            switch (this) {
+                case String:
+                    return String.class;
+                case Date:
+                    return Calendar.class;
+                case Float:
+                case Numeric:
+                    return Double.class;
+                case Boolean:
+                    return Boolean.class;
+                case Memo:
+                    return Object.class;
+            }
+            
+            return null;
+        }
     }
     
     @Override
