@@ -49,13 +49,8 @@ public class AttributeFileTableModel extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        try {
-            // Add 1 for the ID column
-            return table.getFieldCount() + 1;
-        } catch (DBFException e) {
-            System.out.println(e.getMessage());
-            return 0;
-        }
+        // Add 1 for the ID column
+        return table.getFieldCount() + 1;
     }
 
     @Override
@@ -68,12 +63,9 @@ public class AttributeFileTableModel extends AbstractTableModel {
         int fieldIndex = columnIndex - 1;
         
         Class<?> klass = Object.class;
-        try {
-            DBFField[] fields = table.getAllFields();
-            
+        DBFField[] fields = table.getAllFields();
+        if (fieldIndex < fields.length) {
             klass = fields[fieldIndex].getDataType().getEquivalentClass();
-        } catch (DBFException e) {
-            System.out.println(e.getMessage());
         }
         
         return klass;

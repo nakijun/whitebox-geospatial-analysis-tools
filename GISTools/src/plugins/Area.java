@@ -391,7 +391,7 @@ public class Area implements WhiteboxPlugin {
             DBFField field = new DBFField();
             field = new DBFField();
             field.setName("AREA");
-            field.setDataType(DBFField.DBFDataType.Numeric);
+            field.setDataType(DBFField.DBFDataType.NUMERIC);
             field.setFieldLength(10);
             field.setDecimalCount(4);
             input.attributeTable.addField(field);

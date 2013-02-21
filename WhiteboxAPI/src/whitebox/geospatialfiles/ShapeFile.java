@@ -63,7 +63,7 @@ public class ShapeFile {
     public ArrayList<ShapeFileRecord> records = new ArrayList<ShapeFileRecord>();
     private boolean pointType;
     
-    public AttributeTable attributeTable = null;
+    private AttributeTable attributeTable = null;
     
     // Constructors
     public ShapeFile(String fileName) throws IOException {

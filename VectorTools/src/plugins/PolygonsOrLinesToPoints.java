@@ -237,14 +237,14 @@ public class PolygonsOrLinesToPoints implements WhiteboxPlugin {
 
             fields[0] = new DBFField();
             fields[0].setName("FID");
-            fields[0].setDataType(DBFField.DBFDataType.Numeric);
+            fields[0].setDataType(DBFField.DBFDataType.NUMERIC);
             fields[0].setFieldLength(10);
             fields[0].setDecimalCount(0);
             
             
             fields[0] = new DBFField();
             fields[0].setName("SRC_FID");
-            fields[0].setDataType(DBFField.DBFDataType.Numeric);
+            fields[0].setDataType(DBFField.DBFDataType.NUMERIC);
             fields[0].setFieldLength(10);
             fields[0].setDecimalCount(0);
             

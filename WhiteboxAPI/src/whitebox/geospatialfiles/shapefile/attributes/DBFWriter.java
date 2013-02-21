@@ -214,7 +214,7 @@ public class DBFWriter extends DBFBase {
 
             Class equivalentClass = this.header.fieldArray[i].getDataType().getEquivalentClass();
             
-            if (!(values[i].getClass().equals(equivalentClass))) {
+            if (!(values[i].getClass().isAssignableFrom(equivalentClass))) {
                 throw new DBFException("Invalid value for field " + i);
             }
         }
@@ -320,7 +320,7 @@ public class DBFWriter extends DBFBase {
 
                 switch (this.header.fieldArray[j].getDataType()) {
 
-                    case String:
+                    case STRING:
                         if (objectArray[j] != null) {
 
                             String str_value = objectArray[j].toString();
@@ -331,7 +331,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case Date:
+                    case DATE:
                         if (objectArray[j] != null) {
 
                             GregorianCalendar calendar = new GregorianCalendar();
@@ -347,7 +347,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case Float:
+                    case FLOAT:
 
                         if (objectArray[j] != null) {
 
@@ -359,7 +359,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case Numeric:
+                    case NUMERIC:
 
                         if (objectArray[j] != null) {
 
@@ -372,7 +372,7 @@ public class DBFWriter extends DBFBase {
                         }
 
                         break;
-                    case Boolean:
+                    case BOOLEAN:
 
                         if (objectArray[j] != null) {
 
@@ -390,7 +390,7 @@ public class DBFWriter extends DBFBase {
 
                         break;
 
-                    case Memo:
+                    case MEMO:
 
                         break;
 
@@ -439,7 +439,7 @@ public class DBFWriter extends DBFBase {
 
             switch (this.header.fieldArray[j].getDataType()) {
 
-                case String:
+                case STRING:
                     if (objectArray[j] != null) {
 
                         String str_value = objectArray[j].toString();
@@ -451,7 +451,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case Date:
+                case DATE:
                     if (objectArray[j] != null) {
 
                         GregorianCalendar calendar = new GregorianCalendar();
@@ -467,7 +467,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case Float:
+                case FLOAT:
 
                     if (objectArray[j] != null) {
 
@@ -479,7 +479,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case Numeric:
+                case NUMERIC:
 
                     if (objectArray[j] != null) {
 
@@ -492,7 +492,7 @@ public class DBFWriter extends DBFBase {
                     }
 
                     break;
-                case Boolean:
+                case BOOLEAN:
 
                     if (objectArray[j] != null) {
 
@@ -510,7 +510,7 @@ public class DBFWriter extends DBFBase {
 
                     break;
 
-                case Memo:
+                case MEMO:
 
                     break;
 

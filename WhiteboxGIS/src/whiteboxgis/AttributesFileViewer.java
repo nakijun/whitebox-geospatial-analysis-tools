@@ -45,8 +45,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private String dbfFileName = "";
     private String shapeFileName = "";
 
-    private AttributeTable attTable;
-    private AttributeFileTableModel attTableModel;
+    private AttributeTable attributeTable;
     //private JButton edit = new JButton("Edit");
     private JButton close = new JButton("Close");
     private JTable table = new JTable();
@@ -74,8 +73,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         }
         try {
             shapeFile = new ShapeFile(shapeFileName);
-            attTable = shapeFile.getAttributeTable();
-            attTableModel = new AttributeFileTableModel(attTable);
+            attributeTable = shapeFile.getAttributeTable();
             createGui();
         } catch (IOException e) {
             if (owner instanceof WhiteboxPluginHost) {
@@ -131,22 +129,9 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             
             // field table
             JPanel panel2 = new JPanel();
-            panel2.setLayout(new BoxLayout(panel2, BoxLayout.Y_AXIS));
+            panel2.setLayout(new BoxLayout(panel2, BoxLayout.Y_AXIS));         
             
-            DBFField[] fields = attTable.getAllFields();
-            int numColumns = 4;
-            int numRows = fields.length;
-            String[] columnHeaders = new String[]{"Name", "Type", "Length", "Precision"};
-            Object[][] data = new Object[numRows][numColumns];
-
-            for (int a = 0; a < numRows; a++) {
-                data[a][0] = fields[a].getName();
-                data[a][1] = fields[a].getDataType();
-                data[a][2] = fields[a].getFieldLength();
-                data[a][3] = fields[a].getDecimalCount();
-            }
-            
-            fieldTable = new JTable(data, columnHeaders) {
+            fieldTable = new JTable(new AttributeFieldTableModel(attributeTable)) {
 
                 @Override
                 public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
@@ -202,7 +187,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private JTable getDataTable() {
         try {
             
-            table = new JTable(attTableModel) {
+            table = new JTable(new AttributeFileTableModel(attributeTable)) {
 
                 @Override
                 public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
@@ -290,22 +275,19 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             
             DBFField field = new DBFField();
             field.setName("FID");
-            field.setDataType(DBFField.DBFDataType.Numeric);
+            field.setDataType(DBFField.DBFDataType.NUMERIC);
             field.setFieldLength(10);
             field.setDecimalCount(0);
-            attTable.addField(field);
+            attributeTable.addField(field);
             
-            for (int a = 0; a < attTable.getNumberOfRecords(); a++) {
-                Object[] recData = attTable.getRecord(a);
+            for (int a = 0; a < attributeTable.getNumberOfRecords(); a++) {
+                Object[] recData = attributeTable.getRecord(a);
                 recData[recData.length - 1] = new Double(a);
-                attTable.updateRecord(a, recData);
+                attributeTable.updateRecord(a, recData);
             }
             
-            attTableModel.fireTableStructureChanged();
-            //dbfReader = new DBFReader(dbfFileName);
-            //attTable = new AttributeTable(dbfFileName);
-            //table = getDataTable();
-            //createGui();
+            AttributeFileTableModel tableModel = (AttributeFileTableModel)table.getModel();
+            tableModel.fireTableStructureChanged();
             
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -324,16 +306,13 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             }
             double area;
             int recNum;
-            //double numRecordsDone = 0;
-            //int progress = 0;
-            //double numRecords = shapeFile.getNumberOfRecords();
+
             DBFField field = new DBFField();
-            field = new DBFField();
             field.setName("Area");
-            field.setDataType(DBFField.DBFDataType.Numeric);
+            field.setDataType(DBFField.DBFDataType.NUMERIC);
             field.setFieldLength(10);
             field.setDecimalCount(3);
-            this.shapeFile.attributeTable.addField(field);
+            this.attributeTable.addField(field);
             for (ShapeFileRecord record : shapeFile.records) {
                 if (record.getShapeType() != ShapeType.NULLSHAPE) {
                     if (inputType == ShapeType.POLYGON) {
@@ -351,17 +330,11 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                     }
                     
                     recNum = record.getRecordNumber() - 1;
-                    Object[] recData = this.shapeFile.attributeTable.getRecord(recNum);
+                    Object[] recData = this.attributeTable.getRecord(recNum);
                     recData[recData.length - 1] = new Double(area);
-                    this.shapeFile.attributeTable.updateRecord(recNum, recData);
+                    this.attributeTable.updateRecord(recNum, recData);
 
-                }
-//                if (host != null) {
-//                    numRecordsDone++;
-//                    progress = (int)(100 * numRecordsDone / numRecords);
-//                    host.updateProgress(progress);
-//                }
-                        
+                }                        
             }
             
             host.showFeedback("Calculation complete!");
@@ -391,12 +364,11 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             //int progress = 0;
             //double numRecords = shapeFile.getNumberOfRecords();
             DBFField field = new DBFField();
-            field = new DBFField();
             field.setName("Perimeter");
-            field.setDataType(DBFField.DBFDataType.Numeric);
+            field.setDataType(DBFField.DBFDataType.NUMERIC);
             field.setFieldLength(10);
             field.setDecimalCount(3);
-            this.shapeFile.attributeTable.addField(field);
+            this.attributeTable.addField(field);
             for (ShapeFileRecord record : shapeFile.records) {
                 if (inputType != ShapeType.NULLSHAPE) {
                     if (shapeFile.getShapeType() == ShapeType.POLYGON) {
@@ -413,9 +385,9 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                         perimeter = recPolygon.getPerimeter();
                     }
                     recNum = record.getRecordNumber() - 1;
-                    Object[] recData = this.shapeFile.attributeTable.getRecord(recNum);
+                    Object[] recData = this.attributeTable.getRecord(recNum);
                     recData[recData.length - 1] = new Double(perimeter);
-                    this.shapeFile.attributeTable.updateRecord(recNum, recData);
+                    this.attributeTable.updateRecord(recNum, recData);
 
                 }
 

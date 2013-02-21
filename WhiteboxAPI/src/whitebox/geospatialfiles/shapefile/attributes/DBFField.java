@@ -247,7 +247,7 @@ public class DBFField {
             throw new IllegalArgumentException("Field length should be a positive number");
         }
 
-        if (this.dataType == DBFDataType.Date) {
+        if (this.dataType == DBFDataType.DATE) {
 
             throw new UnsupportedOperationException("Cannot do this on a Date field");
         }
@@ -277,23 +277,37 @@ public class DBFField {
         decimalCount = (byte) value;
     }
     
+    /**
+     * Representation of the field's data type
+     */
     public enum DBFDataType {
-        Date((byte) 'D'), 
-        String((byte) 'C'), 
-        Boolean((byte) 'L'), 
-        Numeric((byte) 'N'), 
-        Float((byte) 'F'), 
-        Memo((byte) 'M');
+        DATE((byte) 'D', "Date"), 
+        STRING((byte) 'C', "String"), 
+        BOOLEAN((byte) 'L', "Boolean"), 
+        NUMERIC((byte) 'N', "Numeric"), 
+        FLOAT((byte) 'F', "Float"), 
+        MEMO((byte) 'M', "Memo");
         
-        private byte symbol;
-        DBFDataType(byte symbol) {
+        private final byte symbol;
+        private final String displayName;
+        DBFDataType(byte symbol, String displayName) {
             this.symbol = symbol;
+            this.displayName = displayName;
         }
         
+        /**
+         * Gets the single byte character symbol that is used by the dbf format
+         * @return single byte character
+         */
         public byte getSymbol() {
             return this.symbol;
         }
         
+        /**
+         * Generator for getting the correct enum value for a single byte symbol
+         * @param symbol
+         * @return DBFDataType enum value
+         */
         public static DBFDataType getTypeBySymbol(byte symbol) {
             for (DBFDataType type : DBFDataType.values()) {
                 if (type.symbol == symbol) {
@@ -304,23 +318,33 @@ public class DBFField {
             return null;
         }
         
+        /**
+         * Gets a Java class equivalent for representing a dbf data type
+         * @return 
+         */
         public Class<?> getEquivalentClass() {
             switch (this) {
-                case String:
+                case STRING:
+                case MEMO:
                     return String.class;
-                case Date:
+                case DATE:
                     return Calendar.class;
-                case Float:
-                case Numeric:
+                case FLOAT:
+                case NUMERIC:
                     return Double.class;
-                case Boolean:
+                case BOOLEAN:
                     return Boolean.class;
-                case Memo:
-                    return Object.class;
             }
             
             return null;
         }
+
+        @Override
+        public String toString() {
+            return this.displayName;
+        }
+        
+        
     }
     
     @Override

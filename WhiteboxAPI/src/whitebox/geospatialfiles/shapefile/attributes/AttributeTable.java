@@ -435,7 +435,7 @@ public class AttributeTable {
 
                 switch (this.fieldArray[i].getDataType()) {
 
-                    case String:
+                    case STRING:
 
                         byte b_array[] = new byte[this.fieldArray[i].getFieldLength()];
                         //dataInputStream.read(b_array);
@@ -443,7 +443,7 @@ public class AttributeTable {
                         recordObjects[i] = new String(b_array, characterSetName);
                         break;
 
-                    case Date:
+                    case DATE:
 
                         byte t_byte_year[] = new byte[4];
                         //dataInputStream.read(t_byte_year);
@@ -475,7 +475,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Float:
+                    case FLOAT:
 
                         try {
 
@@ -498,7 +498,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Numeric:
+                    case NUMERIC:
 
                         try {
 
@@ -522,7 +522,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Boolean:
+                    case BOOLEAN:
 
                         byte t_logical = buf.get();
                         if (t_logical == 'Y' || t_logical == 't' || t_logical == 'T' || t_logical == 't') {
@@ -534,7 +534,7 @@ public class AttributeTable {
                         }
                         break;
 
-                    case Memo:
+                    case MEMO:
                         // TODO Later
                         recordObjects[i] = "null";
                         break;
@@ -620,7 +620,7 @@ public class AttributeTable {
 
                     switch (this.fieldArray[i].getDataType()) {
 
-                        case String:
+                        case STRING:
 
                             byte b_array[] = new byte[this.fieldArray[i].getFieldLength()];
                             //dataInputStream.read(b_array);
@@ -628,7 +628,7 @@ public class AttributeTable {
                             recordObjects[i] = new String(b_array, characterSetName);
                             break;
 
-                        case Date:
+                        case DATE:
 
                             byte t_byte_year[] = new byte[4];
                             //dataInputStream.read(t_byte_year);
@@ -660,7 +660,7 @@ public class AttributeTable {
 
                             break;
 
-                        case Float:
+                        case FLOAT:
 
                             try {
 
@@ -683,7 +683,7 @@ public class AttributeTable {
 
                             break;
 
-                        case Numeric:
+                        case NUMERIC:
 
                             try {
 
@@ -707,7 +707,7 @@ public class AttributeTable {
 
                             break;
 
-                        case Boolean:
+                        case BOOLEAN:
 
                             byte t_logical = buf.get();
                             if (t_logical == 'Y' || t_logical == 't' || t_logical == 'T' || t_logical == 't') {
@@ -719,7 +719,7 @@ public class AttributeTable {
                             }
                             break;
 
-                        case Memo:
+                        case MEMO:
                             // TODO Later
                             recordObjects[i] = new String("null");
                             break;
@@ -843,7 +843,7 @@ public class AttributeTable {
 
                 switch (this.fieldArray[j].getDataType()) {
 
-                    case String:
+                    case STRING:
                         if (rowData[j] != null) {
 
                             String str_value = rowData[j].toString();
@@ -854,7 +854,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Date:
+                    case DATE:
                         if (rowData[j] != null) {
 
                             GregorianCalendar calendar = new GregorianCalendar();
@@ -869,7 +869,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Float:
+                    case FLOAT:
 
                         if (rowData[j] != null) {
 
@@ -881,7 +881,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Numeric:
+                    case NUMERIC:
 
                         if (rowData[j] != null) {
 
@@ -894,7 +894,7 @@ public class AttributeTable {
                         }
 
                         break;
-                    case Boolean:
+                    case BOOLEAN:
 
                         if (rowData[j] != null) {
 
@@ -912,7 +912,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Memo:
+                    case MEMO:
 
                         break;
 
@@ -978,7 +978,7 @@ public class AttributeTable {
 
                 switch (this.fieldArray[j].getDataType()) {
 
-                    case String:
+                    case STRING:
                         if (values[j] != null) {
 
                             String str_value = values[j].toString();
@@ -989,7 +989,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Date:
+                    case DATE:
                         if (values[j] != null) {
 
                             GregorianCalendar calendar = new GregorianCalendar();
@@ -1005,7 +1005,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Float:
+                    case FLOAT:
 
                         if (values[j] != null) {
 
@@ -1017,7 +1017,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Numeric:
+                    case NUMERIC:
 
                         if (values[j] != null) {
 
@@ -1030,7 +1030,7 @@ public class AttributeTable {
                         }
 
                         break;
-                    case Boolean:
+                    case BOOLEAN:
 
                         if (values[j] != null) {
 
@@ -1048,7 +1048,7 @@ public class AttributeTable {
 
                         break;
 
-                    case Memo:
+                    case MEMO:
 
                         break;
 
