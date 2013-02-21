@@ -66,7 +66,7 @@ public class ShapeFile {
     public AttributeTable attributeTable = null;
     
     // Constructors
-    public ShapeFile(String fileName) {
+    public ShapeFile(String fileName) throws IOException {
         setFileName(fileName);
         int extensionIndex = fileName.lastIndexOf(".");
         this.indexFile = fileName.substring(0, extensionIndex) + ".shx";
@@ -77,32 +77,6 @@ public class ShapeFile {
         
         if (databaseFileExists) {
             this.attributeTable = new AttributeTable(databaseFile);
-//            try {
-//                
-//                Object[] tmp = this.attributeTable.getRecord(0);
-//                    for (int i = 0; i < tmp.length; i++) {
-//                        if (tmp[i] != null) {
-//                            System.out.println(tmp[i].toString());
-//                        } else {
-//                            System.out.println("null");
-//                        }
-//                    }
-//                
-//                Object[] tmp1 = this.attributeTable.getRecords(5, 15);
-//                for (int a = 0; a < tmp1.length; a++) {
-//                    System.out.println("Record " + a);
-//                    tmp = (Object[]) tmp1[a];
-//                    for (int i = 0; i < tmp.length; i++) {
-//                        if (tmp[i] != null) {
-//                            System.out.println(tmp[i].toString());
-//                        } else {
-//                            System.out.println("null");
-//                        }
-//                    }
-//                }
-//            } catch (Exception e) {
-//                System.out.println(e.getMessage());
-//            }
         }
     }
     
@@ -1151,6 +1125,15 @@ public class ShapeFile {
             // it doesn't overlap with box at all and null is returned.
             return null;
         }
+    }
+    
+    /**
+     * Gets the AttributeTable object associated with this ShapeFile. If no
+     * database exists for this ShapeFile null will be returned.
+     * @return AttributeTable object or null
+     */
+    public AttributeTable getAttributeTable() {
+        return this.attributeTable;
     }
     
     public String[] getAttributeTableFields() {

@@ -65,20 +65,6 @@ public class AttributeTableTest {
     }
 
     /**
-     * Test of isInitialized method, of class AttributeTable.
-     */
-    @Test
-    public void testIsInitialized() {
-        System.out.println("isInitialized");
-        AttributeTable instance = null;
-        boolean expResult = false;
-        boolean result = instance.isInitialized();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
      * Test of getCurrentRecord method, of class AttributeTable.
      */
     @Test

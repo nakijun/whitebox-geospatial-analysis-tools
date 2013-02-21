@@ -20,6 +20,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -65,20 +66,18 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             setLocation(p.x + parentSize.width / 4, p.y + parentSize.height / 4);
         }
         this.shapeFileName = shapeFileName;
-        shapeFile = new ShapeFile(shapeFileName);
-        
+
         if (shapeFileName.toLowerCase().contains(".shp")) {
             dbfFileName = shapeFileName.replace(".shp", ".dbf");
         } else if (shapeFileName.toLowerCase().contains(".dbf")) {
             dbfFileName = shapeFileName;
         }
-        
-        attTable = new AttributeTable(dbfFileName);
-        attTableModel = new AttributeFileTableModel(attTable);
-
-        if (attTable.isInitialized()) {
+        try {
+            shapeFile = new ShapeFile(shapeFileName);
+            attTable = shapeFile.getAttributeTable();
+            attTableModel = new AttributeFileTableModel(attTable);
             createGui();
-        } else {
+        } catch (IOException e) {
             if (owner instanceof WhiteboxPluginHost) {
                 WhiteboxPluginHost wph = (WhiteboxPluginHost)owner;
                 wph.showFeedback("DBF file not read properly. It is possible that there is no database file.");
@@ -86,7 +85,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 JLabel warning = new JLabel("DBF file not read properly. It is possible that there is no database file.");
                 this.add(warning);
             }
-        }
+        } 
 
     }
     
@@ -195,8 +194,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             //setSize(screenWidth / 2, screenHeight / 2);
             this.setLocation(screenWidth / 4, screenHeight / 4);
             
-        } catch (DBFException dbfe) {
-            System.out.println("DBF file not read properly.");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

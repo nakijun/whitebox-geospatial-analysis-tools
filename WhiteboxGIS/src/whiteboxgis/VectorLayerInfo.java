@@ -18,6 +18,7 @@ package whiteboxgis;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -85,8 +86,12 @@ public class VectorLayerInfo implements MapLayer {
         this.alpha = alpha;
         this.overlayNumber = overlayNumber;
 
-        shapefile = new ShapeFile(fileName);
-
+        try {
+            shapefile = new ShapeFile(fileName);
+        } catch (IOException e) {
+            // The files doesn't exist
+            throw new IllegalArgumentException();
+        }
         currentExtent = new BoundingBox(shapefile.getxMin(), shapefile.getyMin(),
                 shapefile.getxMax(), shapefile.getyMax());
 
