@@ -231,7 +231,17 @@ public class DBFField {
     String, Boolean, Numeric, Float, Date, Memo
      */
     public void setDataType(DBFDataType value) {
+        
+        if (value == this.dataType) {
+            return;
+        }
+        
+        if (value == DBFDataType.DATE) {
+            setFieldLength(8);
+        }
+        
         this.dataType = value;
+        
     }
 
     /**
