@@ -99,6 +99,8 @@ public class AttributeFieldTableModel extends AbstractTableModel {
                     && ColumnName.fromColumnIndex(columnIndex) != ColumnName.PRECISION) {
                     return true;
                 }
+            } else {
+                return true;
             }
         }
         
