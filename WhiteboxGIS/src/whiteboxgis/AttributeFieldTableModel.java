@@ -5,7 +5,10 @@
 package whiteboxgis;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.swing.table.AbstractTableModel;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
@@ -21,7 +24,9 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     
     private AttributeTable attributeTable;
     
+    // To keep track of changes to existing fields
     private HashMap<Integer, DBFField> changedFields = new HashMap<>();
+    private HashMap<Integer, DBFField> newFields = new HashMap<>();
     
     private enum ColumnName {
         NAME("Name", String.class), 
@@ -57,7 +62,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         public String toString() {
             return this.displayName;
         }
-       
+        
     }
     
     public AttributeFieldTableModel(AttributeTable attributeTable) {
@@ -66,7 +71,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public int getRowCount() {
-        return attributeTable.getFieldCount();
+        return attributeTable.getFieldCount() + newFields.size();
     }
 
     @Override
@@ -85,7 +90,29 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public boolean isCellEditable(int rowIndex, int columnIndex) {
-        DBFField row = attributeTable.getField(rowIndex);
+        
+        // Only allow new fields to be edited until edit functionality is added
+        DBFField row = newFields.get(rowIndex);
+        if (row != null) {
+            if (row.getDataType() == DBFDataType.DATE) {
+                if (ColumnName.fromColumnIndex(columnIndex) != ColumnName.LENGTH 
+                    && ColumnName.fromColumnIndex(columnIndex) != ColumnName.PRECISION) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+        
+        // Functionality to be re-added when edit funcationality is added 
+        // (casting data when existing datatype or length is different) 
+        /*
+        DBFField row;
+        if (newFields.containsKey(rowIndex)) {
+            row = newFields.get(rowIndex);
+        } else {
+            row = attributeTable.getField(rowIndex);
+        }
         
         // Date fields can't edit length or precision        
         if (row.getDataType() == DBFDataType.DATE) {
@@ -96,16 +123,29 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         }
         
         return true;
+        
+        */
     }
     
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         
+        DBFField field = null;
         if (rowIndex >= attributeTable.getFieldCount() || columnIndex >= ColumnName.size) {
-            return null;
+            // If it exists in newFields, it will be returned. Null will be returned otherwise.
+            field = newFields.get(rowIndex);
+            if (field == null) {
+                return null;
+            }
         }
         
-        DBFField field = attributeTable.getField(rowIndex);
+        if (field == null) {
+            field = attributeTable.getField(rowIndex);
+        }
+        
+        if (field == null) {
+            return null;
+        }
         
         switch (ColumnName.fromColumnIndex(columnIndex)) {
             case NAME:
@@ -135,7 +175,13 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
-        DBFField row = attributeTable.getField(rowIndex);
+        
+        DBFField row;
+        if (newFields.containsKey(rowIndex)) {
+            row = newFields.get(rowIndex);
+        } else {
+            row = attributeTable.getField(rowIndex);
+        }
         
         ColumnName column = ColumnName.fromColumnIndex(columnIndex); 
         
@@ -156,5 +202,40 @@ public class AttributeFieldTableModel extends AbstractTableModel {
             }
         }
 
+    }
+    
+    /**
+     * Adds a new generic field to the model. The field is only exists in the model
+     * and is not added to the DBF file until saved.
+     */
+    public void createNewField() {
+        newFields.put(getRowCount(), new DBFField());
+        fireTableRowsInserted(getRowCount(), getRowCount());
+    }
+    
+    /**
+     * Saves changes to disk. Adds new fields and makes modifications to existing
+     * fields
+     */
+    public boolean commitChanges() {
+        
+        Set<Map.Entry<Integer, DBFField>> entries = newFields.entrySet();
+        
+        for (Iterator<Map.Entry<Integer, DBFField>> iter = entries.iterator(); iter.hasNext();) {
+            Map.Entry<Integer, DBFField> entry = iter.next();
+            try {
+                attributeTable.addField(entry.getValue());
+                iter.remove();
+            } catch (DBFException e) {
+                // Ignore failed insert
+            }
+        }
+        
+        if (!newFields.isEmpty()) {
+            // Some changes weren't saved
+            return false;
+        }
+        
+        return true;        
     }
 }

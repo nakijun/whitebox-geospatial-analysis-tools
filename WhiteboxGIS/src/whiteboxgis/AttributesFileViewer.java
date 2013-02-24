@@ -22,8 +22,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import whitebox.geospatialfiles.ShapeFile;
@@ -45,7 +43,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
 
     private AttributeTable attributeTable;
     //private JButton edit = new JButton("Edit");
-    private JTable table = new JTable();
+    private JTable dataTable = new JTable();
     private JTable fieldTable = new JTable();
     private JTabbedPane tabs;
     private WhiteboxPluginHost host = null;
@@ -124,9 +122,9 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
 
             Box mainBox = Box.createVerticalBox();
             
-            table = getDataTable();
+            dataTable = getDataTable();
           
-            JScrollPane scroll = new JScrollPane(table);
+            JScrollPane scroll = new JScrollPane(dataTable);
             tabs = new JTabbedPane();
 
             JPanel panel1 = new JPanel();
@@ -196,7 +194,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private JTable getDataTable() {
         try {
             
-            table = new JTable(new AttributeFileTableModel(attributeTable)) {
+            dataTable = new JTable(new AttributeFileTableModel(attributeTable)) {
 
                 @Override
                 public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
@@ -216,19 +214,19 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 }
             };
             
-            table.setAutoCreateRowSorter(true);
-            table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+            dataTable.setAutoCreateRowSorter(true);
+            dataTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
             TableColumn column = null;
             
-            for (int i = 0; i < table.getColumnCount(); i++) {
-                column = table.getColumnModel().getColumn(i);
+            for (int i = 0; i < dataTable.getColumnCount(); i++) {
+                column = dataTable.getColumnModel().getColumn(i);
                 if (i == 0) {
                     column.setPreferredWidth(40);
                 } else {
                     column.setPreferredWidth(70);
                 }
             }
-            return table;
+            return dataTable;
         } catch (Exception e) {
             return null;
         }
@@ -245,6 +243,11 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         addFID.addActionListener(this);
         //addFID.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         addFieldMenu.add(addFID);
+        
+        JMenuItem addNewField = new JMenuItem("Add New Field");
+        addNewField.setActionCommand("addNewField");
+        addNewField.addActionListener(this);
+        addFieldMenu.add(addNewField);
         
         if (shapeFile.getShapeType().getBaseType() == ShapeType.POLYGON) {
             JMenuItem addAreaField = new JMenuItem("Add Area Field");
@@ -270,24 +273,49 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         if (actionCommand.equals("close")) {
             this.dispose();
         } else if (actionCommand.equals("save")) {
-            int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save chages?", 
-                    "Save?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
-            if (option == JOptionPane.OK_OPTION) {
-                AttributeFileTableModel model = (AttributeFileTableModel)table.getModel();
-                boolean success = model.commitChanges();
-                if (!success) {
-                    JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
-                    // TODO: 
-                }
-            }
-                
+            saveChanges();
         } else if (actionCommand.equals("addFID")) {
             addFID();
+        } else if (actionCommand.equals("addNewField")) {
+            addNewField();
         } else if (actionCommand.equals("addAreaField")) {
             addAreaField();
         } else if (actionCommand.equals("addPerimeterField")) {
             addPerimeterField();
         }
+    }
+    
+    private void saveChanges() {
+        
+        if (dataTable.isShowing()) {
+            int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to data?", 
+                "Save Data Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
+            if (option == JOptionPane.OK_OPTION) {
+                AttributeFileTableModel model = (AttributeFileTableModel)dataTable.getModel();
+                boolean success = model.commitChanges();
+                if (!success) {
+                    JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
+                    // TODO: Report to use which rows weren't saved
+                }
+            }
+        } else if (fieldTable.isShowing()) {
+            int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to fields? Warning: This operation can take a long time.", 
+                "Save Field Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
+            if (option == JOptionPane.OK_OPTION) {
+                AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+                boolean success = fieldModel.commitChanges();
+                if (!success) {
+                    JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
+                }
+                
+                AttributeFileTableModel tableModel = (AttributeFileTableModel)dataTable.getModel();
+                tableModel.fireTableStructureChanged();
+            }
+            
+        }
+        
+        
+        
     }
     
     private void addFID() {
@@ -307,12 +335,18 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 attributeTable.updateRecord(a, recData);
             }
             
-            AttributeFileTableModel tableModel = (AttributeFileTableModel)table.getModel();
+            AttributeFileTableModel tableModel = (AttributeFileTableModel)dataTable.getModel();
             tableModel.fireTableStructureChanged();
             
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+    
+    private void addNewField() {
+        AttributeFieldTableModel model = (AttributeFieldTableModel)fieldTable.getModel();
+        
+        model.createNewField();
     }
     
     private void addAreaField() {

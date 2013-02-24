@@ -107,6 +107,15 @@ public class DBFField {
 
         return field;
     }
+    
+    /**
+     * Creates a default DBFField.
+     */
+    public DBFField() {
+        this.dataType = DBFDataType.STRING;
+        this.fieldLength = 10;
+        this.decimalCount = 0;
+    }
 
     /**
     Writes the content of DBFField object into the stream as per
