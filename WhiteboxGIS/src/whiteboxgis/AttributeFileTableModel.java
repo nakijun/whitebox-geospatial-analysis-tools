@@ -16,10 +16,15 @@
  */
 package whiteboxgis;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import javax.swing.table.AbstractTableModel;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField;
+import whitebox.interfaces.WhiteboxPluginHost;
 
 /**
  * Model for displaying an AttributeTable in AttributeFilesViewer.
@@ -28,6 +33,9 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 public class AttributeFileTableModel extends AbstractTableModel {
     
     private AttributeTable table;
+    
+    // A lookup table for changed rows. This allows changes to exist only in memory
+    private HashMap<Integer, Object[]> changedRows = new HashMap<>();
     
     public AttributeFileTableModel(AttributeTable table) {
         this.table = table;
@@ -94,7 +102,14 @@ public class AttributeFileTableModel extends AbstractTableModel {
         }
         int fieldIndex = columnIndex - 1;
         try {
-            Object[] row = table.getRecord(rowIndex);
+            
+            // First check if the row is in the changed rows
+            Object[] row = changedRows.get(rowIndex);
+            
+            // Not changed, get it from disk
+            if (row == null) {
+                row = table.getRecord(rowIndex);
+            }
 
             if (row != null && row.length > fieldIndex) {
                 // First column shown is the ID
@@ -121,14 +136,44 @@ public class AttributeFileTableModel extends AbstractTableModel {
             
             if (row != null && row.length > fieldIndex) {
                 row[fieldIndex] = aValue;
-                table.updateRecord(rowIndex, row);
-
+                changedRows.put(rowIndex, row);
             }
         } catch (DBFException e) {
             System.out.println(e.getMessage());
         } catch (NumberFormatException e) {
             System.out.println("Entered value not compatible with field type");
         }
+    }
+    
+    /**
+     * Method to signal from the view to the model that changes to row values should
+     * be saved to disk.
+     * @return True if all changes were saved and false if some changes couldn't
+     * be saved.
+     */
+    public boolean commitChanges() {
+        
+        Set<Map.Entry<Integer, Object[]>> entries = changedRows.entrySet();
+        
+        for (Iterator<Map.Entry<Integer, Object[]>> iter = entries.iterator(); iter.hasNext();) {
+            Map.Entry<Integer, Object[]> entry = iter.next();
+            try {
+                table.updateRecord(entry.getKey(), entry.getValue());
+                iter.remove();
+            } catch (DBFException e) {
+                System.out.println(e.getMessage());
+            }
+            
+        }
+        
+        if (!changedRows.isEmpty()) {
+            // Some changes weren't saved
+            return false;
+        }
+        
+        return true;
+        
+        
     }
     
 }

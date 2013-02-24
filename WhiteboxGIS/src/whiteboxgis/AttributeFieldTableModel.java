@@ -4,6 +4,7 @@
  */
 package whiteboxgis;
 
+import java.util.HashMap;
 import java.util.List;
 import javax.swing.table.AbstractTableModel;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
@@ -20,17 +21,24 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     
     private AttributeTable attributeTable;
     
+    private HashMap<Integer, DBFField> changedFields = new HashMap<>();
+    
     private enum ColumnName {
-        NAME("Name"), TYPE("Type"), LENGTH("Length"), PRECISION("Precision");
+        NAME("Name", String.class), 
+        TYPE("Type", DBFDataType.class), 
+        LENGTH("Length", Integer.class), 
+        PRECISION("Precision", Integer.class);
         
         public static final int size = ColumnName.values().length;
         
         private static final ColumnName[] values = ColumnName.values();
         
         private final String displayName;
+        private final Class<?> columnClass;
         
-        ColumnName(String displayName) {
+        ColumnName(String displayName, Class<?> columnClass) {
             this.displayName = displayName;
+            this.columnClass = columnClass;
         }
         
         public static ColumnName fromColumnIndex(int columnIndex) {
@@ -39,6 +47,10 @@ public class AttributeFieldTableModel extends AbstractTableModel {
             }
             
             return null;
+        }
+        
+        public Class<?> getColumnClass() {
+            return this.columnClass;
         }
 
         @Override
@@ -115,18 +127,10 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         ColumnName column = ColumnName.fromColumnIndex(columnIndex);
         
         if (column != null) {
-            switch (column) {
-                case NAME:
-                    return String.class;
-                case TYPE:
-                    return DBFDataType.class;
-                case LENGTH:
-                case PRECISION:
-                    return Integer.class;
-            }
+            return column.getColumnClass();
+        } else {
+            return super.getColumnClass(columnIndex);
         }
-        
-        return super.getColumnClass(columnIndex);
     }
 
     @Override

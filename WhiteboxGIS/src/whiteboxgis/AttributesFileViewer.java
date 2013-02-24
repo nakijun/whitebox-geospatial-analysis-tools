@@ -29,9 +29,7 @@ import javax.swing.table.TableColumn;
 import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.shapefile.ShapeFileRecord;
 import whitebox.geospatialfiles.shapefile.ShapeType;
-import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField;
-import whitebox.geospatialfiles.shapefile.attributes.DBFReader;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField.DBFDataType;
 import whitebox.interfaces.WhiteboxPluginHost;
@@ -47,7 +45,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
 
     private AttributeTable attributeTable;
     //private JButton edit = new JButton("Edit");
-    private JButton close = new JButton("Close");
     private JTable table = new JTable();
     private JTable fieldTable = new JTable();
     private JTabbedPane tabs;
@@ -104,12 +101,24 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             box1.add(Box.createHorizontalStrut(10));
             box1.add(Box.createRigidArea(new Dimension(5, 30)));
             box1.add(Box.createRigidArea(new Dimension(5, 30)));
-            box1.add(close);
+            
+            JButton close = new JButton("Close");
             close.setActionCommand("close");
             close.addActionListener(this);
             close.setToolTipText("Exit without saving changes");
+            box1.add(close);
+            
+            JButton save = new JButton("Save");
+            save.setActionCommand("save");
+            save.addActionListener(this);
+            save.setToolTipText("Save changes to disk");
+            box1.add(save);
+            
             box1.add(Box.createHorizontalStrut(100));
             box1.add(Box.createHorizontalGlue());
+            
+            
+            
 
             add(box1, BorderLayout.SOUTH);
 
@@ -260,6 +269,18 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         String actionCommand = e.getActionCommand();
         if (actionCommand.equals("close")) {
             this.dispose();
+        } else if (actionCommand.equals("save")) {
+            int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save chages?", 
+                    "Save?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
+            if (option == JOptionPane.OK_OPTION) {
+                AttributeFileTableModel model = (AttributeFileTableModel)table.getModel();
+                boolean success = model.commitChanges();
+                if (!success) {
+                    JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
+                    // TODO: 
+                }
+            }
+                
         } else if (actionCommand.equals("addFID")) {
             addFID();
         } else if (actionCommand.equals("addAreaField")) {
