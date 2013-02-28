@@ -24,7 +24,6 @@ import javax.swing.table.AbstractTableModel;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField;
-import whitebox.interfaces.WhiteboxPluginHost;
 
 /**
  * Model for displaying an AttributeTable in AttributeFilesViewer.
@@ -33,6 +32,9 @@ import whitebox.interfaces.WhiteboxPluginHost;
 public class AttributeFileTableModel extends AbstractTableModel {
     
     private AttributeTable table;
+    
+    // The number of columns shown that are not part of the AttributeTable's fields
+    private static final int GENERATED_COLUMN_COUNT = 2;
     
     // A lookup table for changed rows. This allows changes to exist only in memory
     private HashMap<Integer, Object[]> changedRows = new HashMap<>();
@@ -43,7 +45,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
 
     @Override
     public boolean isCellEditable(int rowIndex, int columnIndex) {
-        if (columnIndex == 0) {
+        if (columnIndex == 0 || columnIndex == 1) {
             return false;
         }
         
@@ -57,18 +59,20 @@ public class AttributeFileTableModel extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        // Add 1 for the ID column
-        return table.getFieldCount() + 1;
+        // Add 2 for the modified column and ID column
+        return table.getFieldCount() + GENERATED_COLUMN_COUNT;
     }
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
         
         if (columnIndex == 0) {
+            return String.class;
+        } else if (columnIndex == 1) {
             return Integer.class;
         }
         
-        int fieldIndex = columnIndex - 1;
+        int fieldIndex = columnIndex - GENERATED_COLUMN_COUNT;
         
         Class<?> klass = Object.class;
         DBFField[] fields = table.getAllFields();
@@ -82,25 +86,29 @@ public class AttributeFileTableModel extends AbstractTableModel {
     @Override
     public String getColumnName(int column) {
         if (column == 0) {
+            return "";
+        } else if (column == 1) {
             return "ID";
         }
-        int fieldIndex = column - 1;
+        int fieldIndex = column - GENERATED_COLUMN_COUNT;
         String[] names = table.getAttributeTableFieldNames();
         if (names != null && names.length > fieldIndex) {
             return names[fieldIndex];
         }
         
-        // Return empty string if column name doesn't exist
-        return "";
+        return super.getColumnName(column);
     }
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         
         if (columnIndex == 0) {
+            // Mark with * if the row is modified and unsaved
+            return (changedRows.get(rowIndex) != null ? "*" : "");
+        } else if (columnIndex == 1) {
             return rowIndex;
         }
-        int fieldIndex = columnIndex - 1;
+        int fieldIndex = columnIndex - GENERATED_COLUMN_COUNT;
         try {
             
             // First check if the row is in the changed rows
@@ -126,12 +134,8 @@ public class AttributeFileTableModel extends AbstractTableModel {
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
         // Check if the type of aValue fits to table at rowIndex, columnIndex
         
-        // columnIndex 0 is always ID
-        if (columnIndex == 0) {
-            return;
-        }
         try {
-            int fieldIndex = columnIndex - 1;
+            int fieldIndex = columnIndex - GENERATED_COLUMN_COUNT;
             Object[] row = table.getRecord(rowIndex);
             
             if (row != null && row.length > fieldIndex) {
@@ -143,6 +147,8 @@ public class AttributeFileTableModel extends AbstractTableModel {
         } catch (NumberFormatException e) {
             System.out.println("Entered value not compatible with field type");
         }
+        
+        this.fireTableRowsUpdated(rowIndex, rowIndex);
     }
     
     /**
@@ -172,8 +178,19 @@ public class AttributeFileTableModel extends AbstractTableModel {
         }
         
         return true;
-        
-        
+
+    }
+    
+    /**
+     * Returns false if there are unsaved changes.
+     * @return True if all changes are saved
+     */
+    public boolean isSaved() {
+        if (changedRows.isEmpty()) {
+            return true;
+        } else {
+            return false;
+        }
     }
     
 }

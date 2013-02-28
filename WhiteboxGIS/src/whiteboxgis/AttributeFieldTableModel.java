@@ -24,11 +24,14 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     
     private AttributeTable attributeTable;
     
+    private static final String MODIFIED_INDICATOR = "*";
+    private static final String NOT_MODIFIED_INDICATOR = "";
+    
     // To keep track of changes to existing fields
-    private HashMap<Integer, DBFField> changedFields = new HashMap<>();
     private HashMap<Integer, DBFField> newFields = new HashMap<>();
     
-    private enum ColumnName {
+    protected enum ColumnName {
+        MODIFIED("", String.class),
         NAME("Name", String.class), 
         TYPE("Type", DBFDataType.class), 
         LENGTH("Length", Integer.class), 
@@ -76,11 +79,12 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        return ColumnName.values().length; // Currently Name, Type, Length and Precision
+        return ColumnName.values().length;
     }
     
     @Override
     public String getColumnName(int column) {
+        
         ColumnName columnName = ColumnName.fromColumnIndex(column);
         if (columnName != null) {
             return columnName.toString();
@@ -90,6 +94,11 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public boolean isCellEditable(int rowIndex, int columnIndex) {
+        
+        // Modified column isn't editable
+        if (columnIndex == 0) {
+            return false;
+        }
         
         // Only allow new fields to be edited until edit functionality is added
         DBFField row = newFields.get(rowIndex);
@@ -138,18 +147,21 @@ public class AttributeFieldTableModel extends AbstractTableModel {
             field = newFields.get(rowIndex);
             if (field == null) {
                 return null;
+            } else if (ColumnName.fromColumnIndex(columnIndex) == ColumnName.MODIFIED) {
+                return MODIFIED_INDICATOR;
             }
         }
         
         if (field == null) {
-            field = attributeTable.getField(rowIndex);
+            field = attributeTable.getField(rowIndex);       
+            if (field == null) {
+                return null;
+            }
         }
-        
-        if (field == null) {
-            return null;
-        }
-        
+
         switch (ColumnName.fromColumnIndex(columnIndex)) {
+            case MODIFIED:
+                return NOT_MODIFIED_INDICATOR;
             case NAME:
                 return field.getName();
             case TYPE:
@@ -203,16 +215,29 @@ public class AttributeFieldTableModel extends AbstractTableModel {
                     break;
             }
         }
+        
+        this.fireTableRowsUpdated(rowIndex, rowIndex);
 
     }
     
     /**
-     * Adds a new generic field to the model. The field is only exists in the model
-     * and is not added to the DBF file until saved.
+     * Adds a new generic field to the model. The field only exists in the model
+     * and is not added to the DBF file until saved with @see commitChanges()
      */
     public void createNewField() {
-        newFields.put(getRowCount(), new DBFField());
-        fireTableRowsInserted(getRowCount(), getRowCount());
+        createNewField(new DBFField());
+    }
+    
+    /**
+     * Adds new field to the model. The field only exists in the model and is
+     * not added to the DBF field until saved with @see commitChanges()
+     * @param field 
+     */
+    public void createNewField(DBFField field) {
+        if (field != null) {
+            newFields.put(getRowCount(), field);
+            fireTableRowsInserted(getRowCount(), getRowCount());
+        }
     }
     
     /**
@@ -239,5 +264,17 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         }
         
         return true;        
+    }
+    
+    /**
+     * Returns false if there are unsaved changes
+     * @return True if all changes are saved
+     */
+    public boolean isSaved() {
+        if (newFields.isEmpty()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }

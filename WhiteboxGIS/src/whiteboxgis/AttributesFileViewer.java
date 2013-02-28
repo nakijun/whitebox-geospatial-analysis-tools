@@ -19,6 +19,8 @@ package whiteboxgis;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import javax.swing.*;
@@ -79,6 +81,15 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 this.add(warning);
             }
         } 
+        
+        this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        this.addWindowListener(new WindowAdapter() {
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                closeWindow();
+            }
+        });
 
     }
     
@@ -115,9 +126,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             box1.add(Box.createHorizontalStrut(100));
             box1.add(Box.createHorizontalGlue());
             
-            
-            
-
             add(box1, BorderLayout.SOUTH);
 
             Box mainBox = Box.createVerticalBox();
@@ -131,44 +139,17 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             panel1.setLayout(new BoxLayout(panel1, BoxLayout.Y_AXIS));
             panel1.add(scroll);
             tabs.addTab("Attributes Table", panel1);
-            //tabs.setMnemonicAt(0, KeyEvent.VK_1);
 
-            
             // field table
+                        
             JPanel panel2 = new JPanel();
-            panel2.setLayout(new BoxLayout(panel2, BoxLayout.Y_AXIS));         
+            panel2.setLayout(new BoxLayout(panel2, BoxLayout.Y_AXIS));
             
-            fieldTable = new JTable(new AttributeFieldTableModel(attributeTable)) {
+            fieldTable = getFieldTable();
 
-                @Override
-                public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
-                    Component comp = super.prepareRenderer(renderer, Index_row, Index_col);
-                    //even index, selected or not selected
-                    if (Index_row % 2 == 0) {// && !isCellSelected(Index_row, Index_col)) {
-                        comp.setBackground(Color.WHITE);
-                        comp.setForeground(Color.BLACK);
-                    } else {
-                        comp.setBackground(new Color(225, 245, 255)); //new Color(210, 230, 255));
-                        comp.setForeground(Color.BLACK);
-                    }
-                    if (isCellSelected(Index_row, Index_col)) {
-                        comp.setForeground(Color.RED);
-                    }
-                    return comp;
-                }
-            };
-            
-            TableColumn typeColumn = fieldTable.getColumnModel().getColumn(1);
-            JComboBox typeComboBox = new JComboBox();
-            for (DBFDataType type : DBFDataType.values()) {
-                typeComboBox.addItem(type);
-            }
-            typeColumn.setCellEditor(new DefaultCellEditor(typeComboBox));
-            
             JScrollPane scroll2 = new JScrollPane(fieldTable);
             panel2.add(scroll2);
             tabs.addTab("Field Summary", panel2);
-            
             
             mainBox.add(tabs);
             this.getContentPane().add(mainBox, BorderLayout.CENTER);
@@ -187,49 +168,87 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             this.setLocation(screenWidth / 4, screenHeight / 4);
             
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println(e);
         }
     }
     
     private JTable getDataTable() {
-        try {
-            
-            dataTable = new JTable(new AttributeFileTableModel(attributeTable)) {
+        
+        JTable table = new JTable(new AttributeFileTableModel(attributeTable)) {
 
-                @Override
-                public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
-                    Component comp = super.prepareRenderer(renderer, Index_row, Index_col);
-                    //even index, selected or not selected
-                    if (Index_row % 2 == 0) {// && !isCellSelected(Index_row, Index_col)) {
-                        comp.setBackground(Color.WHITE);
-                        comp.setForeground(Color.BLACK);
-                    } else {
-                        comp.setBackground(new Color(225, 245, 255)); //new Color(210, 230, 255));
-                        comp.setForeground(Color.BLACK);
-                    }
-                    if (isCellSelected(Index_row, Index_col)) {
-                        comp.setForeground(Color.RED);
-                    }
-                    return comp;
-                }
-            };
-            
-            dataTable.setAutoCreateRowSorter(true);
-            dataTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-            TableColumn column = null;
-            
-            for (int i = 0; i < dataTable.getColumnCount(); i++) {
-                column = dataTable.getColumnModel().getColumn(i);
-                if (i == 0) {
-                    column.setPreferredWidth(40);
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
+                Component comp = super.prepareRenderer(renderer, Index_row, Index_col);
+                //even index, selected or not selected
+                if (Index_row % 2 == 0) {// && !isCellSelected(Index_row, Index_col)) {
+                    comp.setBackground(Color.WHITE);
+                    comp.setForeground(Color.BLACK);
                 } else {
-                    column.setPreferredWidth(70);
+                    comp.setBackground(new Color(225, 245, 255)); //new Color(210, 230, 255));
+                    comp.setForeground(Color.BLACK);
                 }
+                if (isCellSelected(Index_row, Index_col)) {
+                    comp.setForeground(Color.RED);
+                }
+                return comp;
             }
-            return dataTable;
-        } catch (Exception e) {
-            return null;
+        };
+
+        table.setAutoCreateRowSorter(true);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        TableColumn column;
+
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            column = table.getColumnModel().getColumn(i);
+            if (i == 0) {
+                column.setPreferredWidth(10);
+            } else if (i == 1) {
+                column.setPreferredWidth(40);
+            } else {
+                column.setPreferredWidth(70);
+            }
         }
+        
+        return table;
+    }
+    
+    private JTable getFieldTable() {
+
+        JTable table = new JTable(new AttributeFieldTableModel(attributeTable)) {
+
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
+                Component comp = super.prepareRenderer(renderer, Index_row, Index_col);
+                //even index, selected or not selected
+                if (Index_row % 2 == 0) {// && !isCellSelected(Index_row, Index_col)) {
+                    comp.setBackground(Color.WHITE);
+                    comp.setForeground(Color.BLACK);
+                } else {
+                    comp.setBackground(new Color(225, 245, 255)); //new Color(210, 230, 255));
+                    comp.setForeground(Color.BLACK);
+                }
+                if (isCellSelected(Index_row, Index_col)) {
+                    comp.setForeground(Color.RED);
+                }
+                return comp;
+            }
+        };
+
+        // Add cell editor for type column
+        int typeColIndex = AttributeFieldTableModel.ColumnName.TYPE.ordinal();
+        TableColumn typeColumn = table.getColumnModel().getColumn(typeColIndex);
+        JComboBox typeComboBox = new JComboBox();
+        for (DBFDataType type : DBFDataType.values()) {
+            typeComboBox.addItem(type);
+        }
+        typeColumn.setCellEditor(new DefaultCellEditor(typeComboBox));
+        
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);        
+        int modifiedColIndex = AttributeFieldTableModel.ColumnName.MODIFIED.ordinal();
+        TableColumn modifiedColumn = table.getColumnModel().getColumn(modifiedColIndex);
+        modifiedColumn.setPreferredWidth(10);
+
+        return table;
     }
 
     private JMenuBar createMenu() {
@@ -238,16 +257,15 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         // Add Field menu
         JMenu addFieldMenu = new JMenu("Add Field");
         
-        JMenuItem addFID = new JMenuItem("Add Feature ID");
-        addFID.setActionCommand("addFID");
-        addFID.addActionListener(this);
-        //addFID.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-        addFieldMenu.add(addFID);
-        
         JMenuItem addNewField = new JMenuItem("Add New Field");
         addNewField.setActionCommand("addNewField");
         addNewField.addActionListener(this);
         addFieldMenu.add(addNewField);
+        
+        JMenuItem deleteField = new JMenuItem("Delete Field...");
+        addNewField.setActionCommand("deleteField");
+        addNewField.addActionListener(this);
+        addFieldMenu.add(deleteField);
         
         if (shapeFile.getShapeType().getBaseType() == ShapeType.POLYGON) {
             JMenuItem addAreaField = new JMenuItem("Add Area Field");
@@ -270,19 +288,52 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
         String actionCommand = e.getActionCommand();
-        if (actionCommand.equals("close")) {
-            this.dispose();
-        } else if (actionCommand.equals("save")) {
-            saveChanges();
-        } else if (actionCommand.equals("addFID")) {
-            addFID();
-        } else if (actionCommand.equals("addNewField")) {
-            addNewField();
-        } else if (actionCommand.equals("addAreaField")) {
-            addAreaField();
-        } else if (actionCommand.equals("addPerimeterField")) {
-            addPerimeterField();
+        switch (actionCommand) {
+            case "close":
+                closeWindow();
+                break;
+            case "save":
+                saveChanges();
+                break;
+            case "addFID":
+                addFID();
+                break;
+            case "addNewField":
+                addNewField();
+                break;
+            case "deleteField":
+                deleteField();
+            case "addAreaField":
+                addAreaField();
+                break;
+            case "addPerimeterField":
+                addPerimeterField();
+                break;
         }
+    }
+    
+    private void closeWindow() {
+        AttributeFileTableModel dataModel = (AttributeFileTableModel)dataTable.getModel();
+        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+        if (!fieldModel.isSaved()) {
+            tabs.setSelectedIndex(1);
+            int continueChoice = JOptionPane.showOptionDialog(this, 
+                    "New fields were created and not saved, do you want to continue without saving?", 
+                    "Continue?", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
+            if (continueChoice != JOptionPane.OK_OPTION) {
+                return;
+            }
+        }
+        if (!dataModel.isSaved()) {
+            tabs.setSelectedIndex(0);
+            int continueChoice = JOptionPane.showOptionDialog(this, 
+                    "There are unsaved changes to the table data, do you want to continue without saving?", 
+                    "Continue?", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
+            if (continueChoice != JOptionPane.OK_OPTION) {
+                return;
+            }
+        }
+        this.dispose();
     }
     
     private void saveChanges() {
@@ -320,7 +371,19 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private void addFID() {
         
-        try {
+        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+        
+        DBFField field = new DBFField();
+        field.setName("FID");
+        field.setDataType(DBFField.DBFDataType.NUMERIC);
+        field.setFieldLength(10);
+        field.setDecimalCount(0);
+        
+        fieldModel.createNewField(field);
+        
+        fieldTable.setVisible(true);
+        
+        /*try {
             
             DBFField field = new DBFField();
             field.setName("FID");
@@ -340,13 +403,24 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        }
+        }*/
     }
     
+    /**
+     * Adds a new field to the field table model.
+     */
     private void addNewField() {
         AttributeFieldTableModel model = (AttributeFieldTableModel)fieldTable.getModel();
         
         model.createNewField();
+    }
+    
+    /**
+     * Hides a field from the field table model and marks the field for deletion
+     * on the next save.
+     */
+    private void deleteField() {
+        
     }
     
     private void addAreaField() {
