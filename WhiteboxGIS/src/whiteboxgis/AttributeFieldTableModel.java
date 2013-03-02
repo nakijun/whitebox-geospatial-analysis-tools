@@ -4,10 +4,14 @@
  */
 package whiteboxgis;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import javax.swing.table.AbstractTableModel;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
@@ -29,6 +33,8 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     
     // To keep track of changes to existing fields
     private HashMap<Integer, DBFField> newFields = new HashMap<>();
+    // To keep track of deleted fields
+    private HashMap<Integer, DBFField> deletedFields = new HashMap<>();
     
     protected enum ColumnName {
         MODIFIED("", String.class),
@@ -74,7 +80,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public int getRowCount() {
-        return attributeTable.getFieldCount() + newFields.size();
+        return attributeTable.getFieldCount() + newFields.size() - deletedFields.size();
     }
 
     @Override
@@ -101,7 +107,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         }
         
         // Only allow new fields to be edited until edit functionality is added
-        DBFField row = newFields.get(rowIndex);
+        DBFField row = newFields.get(getActualRow(rowIndex));
         if (row != null) {
             if (row.getDataType() == DBFDataType.DATE) {
                 if (ColumnName.fromColumnIndex(columnIndex) != ColumnName.LENGTH 
@@ -115,45 +121,48 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         
         return false;
         
-        // Functionality to be re-added when edit funcationality is added 
-        // (casting data when existing datatype or length is different) 
-        /*
-        DBFField row;
-        if (newFields.containsKey(rowIndex)) {
-            row = newFields.get(rowIndex);
-        } else {
-            row = attributeTable.getField(rowIndex);
-        }
+    }
+    
+    /**
+     * Returns the actual index of the underlying attribute table fields that
+     * represented the model's index. Deleted fields are only hidden in the model
+     * but are still represented in the attribute table.
+     * @param rowIndex
+     * @return 
+     */
+    private int getActualRow(int rowIndex) {
         
-        // Date fields can't edit length or precision        
-        if (row.getDataType() == DBFDataType.DATE) {
-            if (ColumnName.fromColumnIndex(columnIndex) == ColumnName.LENGTH 
-                || ColumnName.fromColumnIndex(columnIndex) == ColumnName.PRECISION) {
-                return false;
+        List<Integer> keyList = new ArrayList(deletedFields.keySet());
+        Collections.sort(keyList);
+
+        int actualIndex = rowIndex;
+        for (int deletedRow : keyList) {
+            if (deletedRow <= actualIndex) {
+                actualIndex++;
             }
         }
         
-        return true;
-        
-        */
+        return actualIndex;
     }
     
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         
+        int actualIndex = getActualRow(rowIndex);
+        
         DBFField field = null;
-        if (rowIndex >= attributeTable.getFieldCount() || columnIndex >= ColumnName.size) {
+        if (actualIndex >= attributeTable.getFieldCount() || columnIndex >= ColumnName.size) {
             // If it exists in newFields, it will be returned. Null will be returned otherwise.
-            field = newFields.get(rowIndex);
+            field = newFields.get(actualIndex);
             if (field == null) {
                 return null;
             } else if (ColumnName.fromColumnIndex(columnIndex) == ColumnName.MODIFIED) {
                 return MODIFIED_INDICATOR;
             }
         }
-        
+               
         if (field == null) {
-            field = attributeTable.getField(rowIndex);       
+            field = attributeTable.getField(actualIndex);       
             if (field == null) {
                 return null;
             }
@@ -190,11 +199,13 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     @Override
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
         
+        int actualRowIndex = getActualRow(rowIndex);
+        
         DBFField row;
-        if (newFields.containsKey(rowIndex)) {
-            row = newFields.get(rowIndex);
+        if (newFields.containsKey(actualRowIndex)) {
+            row = newFields.get(actualRowIndex);
         } else {
-            row = attributeTable.getField(rowIndex);
+            row = attributeTable.getField(actualRowIndex);
         }
         
         ColumnName column = ColumnName.fromColumnIndex(columnIndex); 
@@ -235,30 +246,86 @@ public class AttributeFieldTableModel extends AbstractTableModel {
      */
     public void createNewField(DBFField field) {
         if (field != null) {
-            newFields.put(getRowCount(), field);
-            fireTableRowsInserted(getRowCount(), getRowCount());
+            int index = getActualRow(getRowCount());
+            newFields.put(index, field);
+            fireTableRowsInserted(index, index);
         }
+    }
+    
+    /**
+     * Hides the field (row of model) specified by fieldIndex and marks the
+     * field for deletion on next time changes are saved
+     * @param fieldIndex 
+     */
+    public void deleteField(int fieldIndex) {
+        if (fieldIndex < 0 || fieldIndex >= getRowCount()) {
+            return;
+        }
+        
+        int actualRow = getActualRow(fieldIndex);
+        
+        if (newFields.containsKey(actualRow)) {
+            // Delete a field that doesn't exist in the data yet
+            newFields.remove(actualRow);
+        } else {
+            // Hide the field and mark for deletion
+            DBFField deletedField = attributeTable.getField(actualRow);
+            deletedFields.put(actualRow, deletedField);
+        }
+        
+        fireTableRowsDeleted(fieldIndex, fieldIndex);
+        
     }
     
     /**
      * Saves changes to disk. Adds new fields and makes modifications to existing
      * fields
      */
-    public boolean commitChanges() {
+    public boolean saveChanges() {
+                
+        // Add fields in lowest to heighest index to keep correct order in file
+        List<Map.Entry<Integer, DBFField>> newEntries = new ArrayList(newFields.entrySet());
         
-        Set<Map.Entry<Integer, DBFField>> entries = newFields.entrySet();
+        Collections.sort(newEntries, new Comparator<Map.Entry<Integer, DBFField>>() {
+            @Override
+            public int compare(Entry<Integer, DBFField> o1, Entry<Integer, DBFField> o2) {
+                // Sort in descending order
+                return Integer.compare(o1.getKey(), o2.getKey());
+            }
+        });
         
-        for (Iterator<Map.Entry<Integer, DBFField>> iter = entries.iterator(); iter.hasNext();) {
-            Map.Entry<Integer, DBFField> entry = iter.next();
+        for (Map.Entry<Integer, DBFField> entry : newEntries) {
             try {
                 attributeTable.addField(entry.getValue());
-                iter.remove();
+                newFields.remove(entry.getKey());
             } catch (DBFException e) {
-                // Ignore failed insert
+                System.out.println(e);
             }
         }
         
-        if (!newFields.isEmpty()) {
+        // Delete from greatest index to lowest to prevent changing indexes
+        List<Map.Entry<Integer, DBFField>> deletedEntries = new ArrayList(deletedFields.entrySet());
+        
+        Collections.sort(deletedEntries, new Comparator<Map.Entry<Integer, DBFField>>() {
+
+            @Override
+            public int compare(Entry<Integer, DBFField> o1, Entry<Integer, DBFField> o2) {
+                // Sort in descending order
+                return Integer.compare(o2.getKey(), o1.getKey());
+            }
+        });
+            
+        for (Map.Entry<Integer, DBFField> entry : deletedEntries) {
+            try {
+                System.out.println("Deleting field from AttributeTable: " + entry.getKey() + " " + entry.getValue());
+                attributeTable.deleteField(entry.getKey());
+                deletedFields.remove(entry.getKey());
+            } catch (DBFException e) {
+                System.out.println(e);
+            }
+        }
+        
+        if (!newFields.isEmpty() || !deletedFields.isEmpty()) {
             // Some changes weren't saved
             return false;
         }

@@ -263,8 +263,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         addFieldMenu.add(addNewField);
         
         JMenuItem deleteField = new JMenuItem("Delete Field...");
-        addNewField.setActionCommand("deleteField");
-        addNewField.addActionListener(this);
+        deleteField.setActionCommand("deleteField");
+        deleteField.addActionListener(this);
         addFieldMenu.add(deleteField);
         
         if (shapeFile.getShapeType().getBaseType() == ShapeType.POLYGON) {
@@ -299,10 +299,12 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 addFID();
                 break;
             case "addNewField":
+                tabs.setSelectedIndex(1);
                 addNewField();
                 break;
             case "deleteField":
                 deleteField();
+                break;
             case "addAreaField":
                 addAreaField();
                 break;
@@ -343,30 +345,29 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 "Save Data Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
             if (option == JOptionPane.OK_OPTION) {
                 AttributeFileTableModel model = (AttributeFileTableModel)dataTable.getModel();
-                boolean success = model.commitChanges();
+                boolean success = model.saveChanges();
                 if (!success) {
                     JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
-                    // TODO: Report to use which rows weren't saved
                 }
+                model.fireTableDataChanged();
             }
         } else if (fieldTable.isShowing()) {
             int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to fields? Warning: This operation can take a long time.", 
                 "Save Field Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
             if (option == JOptionPane.OK_OPTION) {
                 AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
-                boolean success = fieldModel.commitChanges();
+                boolean success = fieldModel.saveChanges();
                 if (!success) {
                     JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
                 }
                 
-                AttributeFileTableModel tableModel = (AttributeFileTableModel)dataTable.getModel();
-                tableModel.fireTableStructureChanged();
+                fieldModel.fireTableDataChanged();
+                
+                AttributeFileTableModel dataModel = (AttributeFileTableModel)dataTable.getModel();
+                dataModel.fireTableDataChanged();
             }
             
         }
-        
-        
-        
     }
     
     private void addFID() {
@@ -380,8 +381,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         field.setDecimalCount(0);
         
         fieldModel.createNewField(field);
-        
-        fieldTable.setVisible(true);
         
         /*try {
             
@@ -415,12 +414,63 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         model.createNewField();
     }
     
+    private class SelectionIdentifier {
+        private int index;
+        private Object value;
+        
+        public SelectionIdentifier(int index, Object value) {
+            this.index = index;
+            this.value = value;
+        }
+        
+        public int getIndex(){
+            return index;
+        }
+        
+        public Object getValue() {
+            return value;
+        }
+        
+        @Override
+        public String toString() {
+            if (value != null) {
+                return value.toString();
+            }
+            
+            return null;
+        }
+        
+    }
+    
     /**
      * Hides a field from the field table model and marks the field for deletion
      * on the next save.
      */
     private void deleteField() {
+        AttributeFieldTableModel model = (AttributeFieldTableModel)fieldTable.getModel();
         
+        int fieldCount = model.getRowCount();
+        
+        Object[] selectionOptions = new Object[fieldCount];
+        
+        for (int i = 0; i < fieldCount; i++) {
+            SelectionIdentifier wrapper = new SelectionIdentifier(i, model.getValueAt(i, 
+                    model.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString())));
+            selectionOptions[i] = wrapper;
+            
+        }
+        
+        Object selection = JOptionPane.showInputDialog(this, "Select the field to delete", "Delete Field", JOptionPane.OK_CANCEL_OPTION, null, selectionOptions, null);
+
+        if (selection != null) {
+            int selectionIndex = ((SelectionIdentifier)selection).getIndex();
+            
+            model.deleteField(selectionIndex);
+            
+            System.out.println("Deleting: " + selection.toString());
+
+        }
+ 
     }
     
     private void addAreaField() {

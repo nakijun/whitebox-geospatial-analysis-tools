@@ -324,7 +324,6 @@ public class AttributeTable {
                 new File(fileNameCopy).delete();
             }
             
-            
             DBFField[] outFields = new DBFField[this.fieldCount - 1];
             DBFField[] inFields = getAllFields();
             

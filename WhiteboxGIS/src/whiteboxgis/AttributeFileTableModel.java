@@ -157,7 +157,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
      * @return True if all changes were saved and false if some changes couldn't
      * be saved.
      */
-    public boolean commitChanges() {
+    public boolean saveChanges() {
         
         Set<Map.Entry<Integer, Object[]>> entries = changedRows.entrySet();
         
