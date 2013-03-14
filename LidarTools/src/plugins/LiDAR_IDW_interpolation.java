@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.LASReader;
 import whitebox.geospatialfiles.LASReader.PointRecColours;
 import whitebox.geospatialfiles.LASReader.PointRecord;
+import whitebox.geospatialfiles.MappedWhiteboxRaster;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
@@ -634,8 +635,9 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
                 out.close();
 
                 // Create the whitebox raster object.
-                WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");
-
+                //WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");
+                MappedWhiteboxRaster image = new MappedWhiteboxRaster(outputHeader, "rw", true);
+                
                 double halfResolution = resolution / 2;
                 if (!whatToInterpolate.equals("rgb data")) {
                     for (row = 0; row < nrows; row++) {
@@ -747,7 +749,7 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
             } catch (OutOfMemoryError oe) {
                 showFeedback("The Java Virtual Machine (JVM) is out of memory");
             } catch (Exception e) {
-                showFeedback(e.getMessage());
+                showFeedback(e.getLocalizedMessage());
             } finally {
                 // tells the main application that this process is completed.
                 amIActive = false;

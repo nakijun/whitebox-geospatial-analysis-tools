@@ -29,7 +29,10 @@ import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.LASReader;
 import whitebox.geospatialfiles.LASReader.PointRecColours;
 import whitebox.geospatialfiles.LASReader.PointRecord;
+import whitebox.geospatialfiles.MappedWhiteboxRaster;
 import whitebox.geospatialfiles.WhiteboxRaster;
+import whitebox.geospatialfiles.WhiteboxRasterBase;
+import whitebox.geospatialfiles.WhiteboxRasterInterface;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
 import whitebox.parallel.Parallel;
@@ -625,8 +628,9 @@ public class LiDAR_Max_interpolation implements WhiteboxPlugin {
                 out.close();
 
                 // Create the whitebox raster object.
-                WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");
-
+                //MappedWhiteboxRaster image = new MappedWhiteboxRaster(outputHeader, "rw");
+                WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");    
+                
                 double halfResolution = resolution / 2;
                 for (row = 0; row < nrows; row++) {
                     for (col = 0; col < ncols; col++) {

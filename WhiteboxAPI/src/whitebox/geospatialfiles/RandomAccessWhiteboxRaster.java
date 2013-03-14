@@ -745,7 +745,7 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
 
             buf = ByteBuffer.allocateDirect(cellSizeInBytes * writeLength);
             buf.order(byteOrder);
-                
+            
             if (dataType == DataType.DOUBLE) { //.equals("double")) {
                 double[] da;
                 DoubleBuffer db = buf.asDoubleBuffer();
@@ -768,7 +768,7 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
                 } while (numCellsWritten < numberCells);
                 db = null;
                 da = null;
-                    
+            
             } else if (dataType == DataType.FLOAT) { //.equals("float")) {
                 //buf = ByteBuffer.allocateDirect(cellSizeInBytes * writeLength);
                 //buf.order(byteOrder);
@@ -783,6 +783,7 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
                     }
                     fa = new float[writeLength];
                     if (initialValue != 0) { Arrays.fill(fa, (float)initialValue); }
+                    
                     //buf = ByteBuffer.allocateDirect(cellSizeInBytes * writeLength);
                     //buf.order(byteOrder);
                     buf.clear();
