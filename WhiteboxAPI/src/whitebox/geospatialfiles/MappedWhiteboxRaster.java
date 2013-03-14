@@ -79,6 +79,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
 
     @Override
     public void close() {
+        buffer.force(); // Flush any changes from memory to disk
         buffer = null; // There is no way to force a mapping to close
     }
 
