@@ -74,6 +74,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         
     }
     
+    
     public AttributeFieldTableModel(AttributeTable attributeTable) {
         this.attributeTable = attributeTable;
     }
@@ -156,8 +157,11 @@ public class AttributeFieldTableModel extends AbstractTableModel {
             field = newFields.get(actualIndex);
             if (field == null) {
                 return null;
-            } else if (ColumnName.fromColumnIndex(columnIndex) == ColumnName.MODIFIED) {
-                return MODIFIED_INDICATOR;
+            }
+            switch (ColumnName.fromColumnIndex(columnIndex)) {
+                case MODIFIED:
+                    return MODIFIED_INDICATOR;
+                
             }
         }
                
@@ -178,7 +182,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
             case LENGTH:
                 return field.getFieldLength();
             case PRECISION:
-                return field.getDecimalCount();                
+                return field.getDecimalCount();
         }
         
         return null;
@@ -338,7 +342,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
      * @return True if all changes are saved
      */
     public boolean isSaved() {
-        if (newFields.isEmpty()) {
+        if (newFields.isEmpty() && deletedFields.isEmpty()) {
             return true;
         } else {
             return false;

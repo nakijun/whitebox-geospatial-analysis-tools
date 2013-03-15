@@ -813,6 +813,50 @@ public class AttributeTable {
 
     }
     
+    /**
+     * Replace an existing record. Note that this method actually writes the record
+     * to a temporary buffer and that the file will not be updated until the
+     * write() method is called.
+     * @param values an Object array containing the record values for each field.
+     * @throws DBFException 
+     */
+    public void changeRecord(int index, Object[] values) throws DBFException {
+
+        if (this.fieldArray == null) {
+
+            throw new DBFException("Fields should be set before adding records");
+        }
+
+        if (values == null) {
+
+            throw new DBFException("Null cannot be added as row");
+        }
+
+        if (values.length != this.fieldArray.length) {
+
+            throw new DBFException("Invalid record. Invalid number of fields in row");
+        }
+
+        for (int i = 0; i < this.fieldArray.length; i++) {
+
+            if (values[i] == null) {
+                // null values are not checked
+                continue;
+            }
+            
+            Class equivalentClass = this.fieldArray[i].getDataType().getEquivalentClass();
+            
+            // Check if values[i] is an instance or subclassed instance of the field's expected type
+            if (!(values[i].getClass().isAssignableFrom(equivalentClass))) {
+                throw new DBFException("Invalid value for field " + i);
+            }
+
+        }
+        
+        recordData.add(index, values);
+
+    }
+    
     public void updateRecord(int recordNumber, Object[] rowData) throws DBFException {
         if (recordNumber < 0) {
             throw new DBFException("Record number is out of bounds.");

@@ -16,8 +16,11 @@
  */
 package whiteboxgis;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.swing.table.AbstractTableModel;
@@ -38,6 +41,9 @@ public class AttributeFileTableModel extends AbstractTableModel {
     
     // A lookup table for changed rows. This allows changes to exist only in memory
     private HashMap<Integer, Object[]> changedRows = new HashMap<>();
+    
+    // 
+    private List<Integer> hiddenColumns = new ArrayList<>();
     
     public AttributeFileTableModel(AttributeTable table) {
         this.table = table;
@@ -60,7 +66,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
     @Override
     public int getColumnCount() {
         // Add 2 for the modified column and ID column
-        return table.getFieldCount() + GENERATED_COLUMN_COUNT;
+        return table.getFieldCount() + GENERATED_COLUMN_COUNT - hiddenColumns.size();
     }
 
     @Override
@@ -72,7 +78,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
             return Integer.class;
         }
         
-        int fieldIndex = columnIndex - GENERATED_COLUMN_COUNT;
+        int fieldIndex = getActualColumn(columnIndex);
         
         Class<?> klass = Object.class;
         DBFField[] fields = table.getAllFields();
@@ -90,13 +96,35 @@ public class AttributeFileTableModel extends AbstractTableModel {
         } else if (column == 1) {
             return "ID";
         }
-        int fieldIndex = column - GENERATED_COLUMN_COUNT;
+        int fieldIndex = getActualColumn(column);
         String[] names = table.getAttributeTableFieldNames();
         if (names != null && names.length > fieldIndex) {
             return names[fieldIndex];
         }
         
         return super.getColumnName(column);
+    }
+    
+    /**
+     * Used to support hidden columns. Skips over hidden columns to find the 
+     * attribute table index for this column.
+     * @param col. JTable column index
+     * @return AttributeTable field index for correct data
+     */
+    private int getActualColumn(int col) {
+        
+        Collections.sort(hiddenColumns);
+        
+        col = col - GENERATED_COLUMN_COUNT;
+
+        int actualIndex = col;
+        for (int deletedRow : hiddenColumns) {
+            if (deletedRow <= actualIndex) {
+                actualIndex++;
+            }
+        }
+        
+        return actualIndex;
     }
 
     @Override
@@ -108,7 +136,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
         } else if (columnIndex == 1) {
             return rowIndex;
         }
-        int fieldIndex = columnIndex - GENERATED_COLUMN_COUNT;
+        int fieldIndex = getActualColumn(columnIndex);
         try {
             
             // First check if the row is in the changed rows
@@ -135,7 +163,7 @@ public class AttributeFileTableModel extends AbstractTableModel {
         // Check if the type of aValue fits to table at rowIndex, columnIndex
         
         try {
-            int fieldIndex = columnIndex - GENERATED_COLUMN_COUNT;
+            int fieldIndex = getActualColumn(columnIndex);
             Object[] row = table.getRecord(rowIndex);
             
             if (row != null && row.length > fieldIndex) {
@@ -149,6 +177,22 @@ public class AttributeFileTableModel extends AbstractTableModel {
         }
         
         this.fireTableRowsUpdated(rowIndex, rowIndex);
+    }
+    
+    /**
+     * Hides the column with model index column from view. This takes the column
+     * index for the visible column in the table, not the AttributeTable field
+     * for that column.
+     * @param column. Visible column index from the table
+     */
+    public void hideColumn(int column) {
+        hiddenColumns.add(column);
+        this.fireTableStructureChanged();
+    }
+    
+    public void unhideColumns() {
+        hiddenColumns.clear();
+        this.fireTableStructureChanged();
     }
     
     /**
@@ -176,6 +220,8 @@ public class AttributeFileTableModel extends AbstractTableModel {
             // Some changes weren't saved
             return false;
         }
+        
+        unhideColumns();
         
         return true;
 

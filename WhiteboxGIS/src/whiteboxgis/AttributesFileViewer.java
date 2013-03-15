@@ -26,6 +26,9 @@ import java.io.IOException;
 import javax.swing.*;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
+import org.python.core.PyCode;
+import org.python.core.PyInteger;
+import org.python.core.PyObject;
 import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.shapefile.ShapeFileRecord;
 import whitebox.geospatialfiles.shapefile.ShapeType;
@@ -33,6 +36,8 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField.DBFDataType;
 import whitebox.interfaces.WhiteboxPluginHost;
+import org.python.util.PythonInterpreter;
+import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 
 /**
  *
@@ -42,6 +47,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private String dbfFileName = "";
     private String shapeFileName = "";
+   
 
     private AttributeTable attributeTable;
     //private JButton edit = new JButton("Edit");
@@ -50,6 +56,10 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private JTabbedPane tabs;
     private WhiteboxPluginHost host = null;
     private ShapeFile shapeFile = null;
+    
+    private JTextField interpField = new JTextField();
+    private JButton evalButton = new JButton();
+    private PythonInterpreter python = new PythonInterpreter();
     
     public AttributesFileViewer(Frame owner, boolean modal, String shapeFileName) {
         super(owner, modal);
@@ -122,6 +132,19 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             save.addActionListener(this);
             save.setToolTipText("Save changes to disk");
             box1.add(save);
+            
+            box1.add(interpField);
+            box1.add(evalButton);
+            evalButton.setText("Eval");
+            python.setOut(System.out);
+            evalButton.addActionListener(new ActionListener() {
+
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    python.exec(interpField.getText());
+                }
+                
+            });
             
             box1.add(Box.createHorizontalStrut(100));
             box1.add(Box.createHorizontalGlue());
@@ -267,6 +290,11 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         deleteField.addActionListener(this);
         addFieldMenu.add(deleteField);
         
+        JMenuItem addFID = new JMenuItem("Add FID");
+        addFID.setActionCommand("addFID");
+        addFID.addActionListener(this);
+        addFieldMenu.add(addFID);
+        
         if (shapeFile.getShapeType().getBaseType() == ShapeType.POLYGON) {
             JMenuItem addAreaField = new JMenuItem("Add Area Field");
             addAreaField.setActionCommand("addAreaField");
@@ -280,6 +308,16 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         }
         
         menubar.add(addFieldMenu);
+        
+        
+        JMenu generateFieldData = new JMenu("Generate Data");
+        
+        JMenuItem generateData = new JMenuItem("Generate Data...");
+        generateData.setActionCommand("generateData");
+        generateData.addActionListener(this);
+        generateFieldData.add(generateData);
+        
+        menubar.add(generateData);
         
         return menubar;
     }
@@ -340,34 +378,44 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private void saveChanges() {
         
-        if (dataTable.isShowing()) {
+        AttributeFileTableModel dataModel = (AttributeFileTableModel)dataTable.getModel();
+        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+        
+        if (!dataModel.isSaved()) {
+            tabs.setSelectedIndex(0);
             int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to data?", 
                 "Save Data Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
             if (option == JOptionPane.OK_OPTION) {
-                AttributeFileTableModel model = (AttributeFileTableModel)dataTable.getModel();
-                boolean success = model.saveChanges();
+                
+                boolean success = dataModel.saveChanges();
                 if (!success) {
                     JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
                 }
-                model.fireTableDataChanged();
+                dataModel.fireTableDataChanged();
             }
-        } else if (fieldTable.isShowing()) {
+        }
+        
+        if (!fieldModel.isSaved()) {
+            tabs.setSelectedIndex(1);
             int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to fields? Warning: This operation can take a long time.", 
                 "Save Field Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
             if (option == JOptionPane.OK_OPTION) {
-                AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+                
                 boolean success = fieldModel.saveChanges();
                 if (!success) {
                     JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
                 }
                 
                 fieldModel.fireTableDataChanged();
-                
-                AttributeFileTableModel dataModel = (AttributeFileTableModel)dataTable.getModel();
+                dataModel.unhideColumns();
                 dataModel.fireTableDataChanged();
             }
             
         }
+    }
+    
+    public interface CellGenerator {
+        public Object generate_cell(int index, Object[] cells);
     }
     
     private void addFID() {
@@ -382,6 +430,30 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         
         fieldModel.createNewField(field);
         
+        fieldModel.saveChanges();
+        
+        python.exec("def generate_cell(index):\n"
+                                        + "    return index + 1\n"
+                                        + "\n");
+        
+        PyObject generator = python.get("generate_cell");
+        try {
+            for (int i = 0; i < attributeTable.getNumberOfRecords(); i++) {
+                Object[] recData = attributeTable.getRecord(i);
+                PyObject ret = generator.__call__(new PyInteger(i));
+                recData[recData.length - 1] = ((PyInteger) ret).asDouble();
+                attributeTable.changeRecord(i, recData);
+
+            }
+        } catch (DBFException e){
+            System.out.println(e);
+        }
+        try {
+            attributeTable.write();
+        } catch (DBFException e) {
+            System.out.println(e);
+        }
+        //fieldModel.saveChanges();
         /*try {
             
             DBFField field = new DBFField();
@@ -447,15 +519,15 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
      * on the next save.
      */
     private void deleteField() {
-        AttributeFieldTableModel model = (AttributeFieldTableModel)fieldTable.getModel();
+        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
         
-        int fieldCount = model.getRowCount();
+        int fieldCount = fieldModel.getRowCount();
         
         Object[] selectionOptions = new Object[fieldCount];
         
         for (int i = 0; i < fieldCount; i++) {
-            SelectionIdentifier wrapper = new SelectionIdentifier(i, model.getValueAt(i, 
-                    model.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString())));
+            SelectionIdentifier wrapper = new SelectionIdentifier(i, fieldModel.getValueAt(i, 
+                    fieldModel.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString())));
             selectionOptions[i] = wrapper;
             
         }
@@ -465,7 +537,10 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         if (selection != null) {
             int selectionIndex = ((SelectionIdentifier)selection).getIndex();
             
-            model.deleteField(selectionIndex);
+            fieldModel.deleteField(selectionIndex);
+            
+            AttributeFileTableModel dataModel = (AttributeFileTableModel)dataTable.getModel();
+            dataModel.hideColumn(selectionIndex);
             
             System.out.println("Deleting: " + selection.toString());
 
