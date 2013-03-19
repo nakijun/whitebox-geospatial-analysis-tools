@@ -24,6 +24,10 @@ import java.io.*;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.script.Bindings;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
+import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -57,12 +61,40 @@ public class Scripter extends JFrame implements ActionListener {
     private JTextArea textArea = new JTextArea();
     private JSplitPane splitPane;
     private PrintWriter errOut = new PrintWriter(new TextAreaWriter(textArea));
-    private String language = "python";
+    private ScriptingLanguage language = ScriptingLanguage.PYTHON;
     private JPanel status = null;
     private JLabel statusLabel = new JLabel();
     private JCheckBoxMenuItem python = new JCheckBoxMenuItem("Python");
     private JCheckBoxMenuItem groovy = new JCheckBoxMenuItem("Groovy");
     private JCheckBoxMenuItem javascript = new JCheckBoxMenuItem("Javascript");
+    
+    private JButton generateDataButton;
+    
+    public static final String PROP_SCRIPTING_LANGUAGE = "languageChanged";
+    public static final String PROP_GENERATE_DATA = "generateData";
+    
+    public enum ScriptingLanguage {
+        PYTHON("Python", "#"), GROOVY("Groovy", "//"), JAVASCRIPT("Javascript", "//");
+        
+        private String displayName;
+        private String commentMarker;
+        
+        private ScriptingLanguage(String displayName, String commentMarker) {
+            this.displayName = displayName;
+            this.commentMarker = commentMarker;
+        }
+        
+        public String getCommentMarker() {
+            return this.commentMarker;
+        }
+        
+        @Override
+        public String toString() {
+            return this.displayName;
+        }
+        
+        
+    }
     
     public Scripter(Frame owner, boolean modal) {
         try {
@@ -165,7 +197,6 @@ public class Scripter extends JFrame implements ActionListener {
             DefaultSyntaxKit.initKit();
             editor.setContentType("text/" + language);
             editor.setEditable(true);
-            editor.setEditable(true);
             editor.setCaretPosition(0);
 
             JScrollPane scroll2 = new JScrollPane(textArea);
@@ -214,6 +245,13 @@ public class Scripter extends JFrame implements ActionListener {
         
         JButton clearConsole = makeToolBarButton("ClearConsole.png", "clearConsole", "Clear the Console", "Clear Console");
         toolbar.add(clearConsole);
+        
+        toolbar.addSeparator();
+        
+        generateDataButton = makeToolBarButton("GenerateData.png", "generateData", "Generate Column Data", "Generate Data");
+        toolbar.add(generateDataButton);
+        
+        showGenerateDataButton(false);
         
         return toolbar;
 
@@ -292,6 +330,7 @@ public class Scripter extends JFrame implements ActionListener {
             sourceMenu.add(toggleComments);
             
             menubar.add(sourceMenu);
+            
 
             this.setJMenuBar(menubar);
 
@@ -350,7 +389,7 @@ public class Scripter extends JFrame implements ActionListener {
 //                        langName, langVersion);
 //            }
 
-            engine = mgr.getEngineByName(language);
+            engine = mgr.getEngineByName(language.toString().toLowerCase());
             //StringWriter sw = new StringWriter();
             //PrintWriter pw = new PrintWriter(sw);
             PrintWriter out = new PrintWriter(new TextAreaWriter(textArea));
@@ -390,11 +429,11 @@ public class Scripter extends JFrame implements ActionListener {
             //String fileDirectory = file.getParentFile() + pathSep;
             
             if (sourceFile.toLowerCase().contains(".py")) {
-                language = "python";
+                language = ScriptingLanguage.PYTHON;
             } else if (sourceFile.toLowerCase().contains(".groovy")) {
-                language = "groovy";
+                language = ScriptingLanguage.GROOVY;
             } else {
-                language = "javascript";
+                language = ScriptingLanguage.JAVASCRIPT;
             }
             editor.setContentType("text/" + language);
             editor.setEditable(true);
@@ -430,12 +469,16 @@ public class Scripter extends JFrame implements ActionListener {
     private void save() {
         if (sourceFile == null) {
             String extension = "";
-            if (language.toLowerCase().equals("python")) {
-                extension = ".py";
-            } else if (language.toLowerCase().equals("groovy")) {
-                extension = ".groovy";
-            } else if (language.toLowerCase().equals("javascript")) {
-                extension = ".js";
+            switch (language) {
+                case PYTHON:
+                    extension = ".py";
+                    break;
+                case GROOVY:
+                    extension = ".groovy";
+                    break;
+                case JAVASCRIPT:
+                    extension = ".js";
+                    break; 
             }
             
             JFileChooser fc = new JFileChooser();
@@ -482,11 +525,11 @@ public class Scripter extends JFrame implements ActionListener {
                 }
                 sourceFile = file.toString();
                 if (sourceFile.toLowerCase().contains(".py")) {
-                    language = "python";
+                    language = ScriptingLanguage.PYTHON;
                 } else if (sourceFile.toLowerCase().contains(".groovy")) {
-                    language = "groovy";
+                    language = ScriptingLanguage.GROOVY;
                 } else if (sourceFile.toLowerCase().contains(".js")) {
-                    language = "javascript";
+                    language = ScriptingLanguage.JAVASCRIPT;
                 }
                 
             } else {
@@ -542,12 +585,8 @@ public class Scripter extends JFrame implements ActionListener {
     }
     
     private void comment() {
-        String lineCommentStart = null;
-        if (language.equals("groovy") || language.equals("javascript")) {
-            lineCommentStart = "// ";
-        } else {
-            lineCommentStart = "# ";
-        }
+        String lineCommentStart = language.getCommentMarker();
+
         Pattern lineCommentPattern = null;
         if (lineCommentPattern == null) {
             lineCommentPattern = Pattern.compile("(^" + lineCommentStart + ")(.*)");
@@ -585,23 +624,11 @@ public class Scripter extends JFrame implements ActionListener {
         } else if (actionCommand.equals("print")) {
             print();
         } else if (actionCommand.equals("python")) {
-            groovy.setState(false);
-            javascript.setState(false);
-            language = "python";
-            editor.setContentType("text/" + language);
-            initScriptEngine();
+            setLanguage(ScriptingLanguage.PYTHON);
         } else if (actionCommand.equals("groovy")) {
-            python.setState(false);
-            javascript.setState(false);
-            language = "groovy";
-            editor.setContentType("text/" + language);
-            initScriptEngine();
+            setLanguage(ScriptingLanguage.GROOVY);
         } else if (actionCommand.equals("javascript")) {
-            python.setState(false);
-            groovy.setState(false);
-            language = "javascript";
-            editor.setContentType("text/" + language);
-            initScriptEngine();
+            setLanguage(ScriptingLanguage.JAVASCRIPT);
         } else if (actionCommand.equals("Comment")) {
             comment();
         } else if (actionCommand.equals("save")) {
@@ -610,7 +637,75 @@ public class Scripter extends JFrame implements ActionListener {
             saveAs();
         } else if (actionCommand.equals("clearConsole")) {
             textArea.setText("");
+        } else if (actionCommand.equals("generateData")) {
+            this.firePropertyChange("generateData", false, true);
         }
+    }
+    
+    public void setLanguage(ScriptingLanguage lang) {
+        
+        
+        ScriptingLanguage oldLang = this.language;
+        if (lang == null) {
+            return;
+        }
+        
+        switch (lang) {
+            case PYTHON:
+                groovy.setState(false);
+                javascript.setState(false);
+                break;
+            case GROOVY:
+                python.setState(false);
+                javascript.setState(false);
+                break;
+            case JAVASCRIPT:
+                groovy.setState(false);
+                python.setState(false);
+                break;
+        }
+        
+        language = lang;
+        
+        editor.setContentType("text/" + language);
+        initScriptEngine();
+        
+        this.firePropertyChange(PROP_SCRIPTING_LANGUAGE, oldLang, lang);
+    }
+    
+    public void showGenerateDataButton(boolean show) {
+        generateDataButton.setVisible(show);
+    }
+    
+    /**
+     * Creates a CompiledScript object using the provided text and the currently
+     * selected ScriptEngine.
+     * @param script
+     * @return 
+     */
+    public CompiledScript compileScript() {
+        try {
+             
+            CompiledScript compiled = ((Compilable) engine).compile(this.editor.getText());
+            
+            return compiled;
+        } catch (ScriptException e) {
+            System.out.println(e);
+        }
+        
+        return null;
+    }
+    
+    public Bindings createBindingsObject() {
+        return engine.createBindings();
+    }
+    
+    public void setEditorText(String text) {
+        this.editor.setText(text);
+    }
+    
+    public ScriptingLanguage getLanguage() {
+        return this.language;
     }
 
     public static void main(String args[]) throws ScriptException {
