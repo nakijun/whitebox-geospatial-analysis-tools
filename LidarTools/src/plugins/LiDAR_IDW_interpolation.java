@@ -749,6 +749,7 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
             } catch (OutOfMemoryError oe) {
                 showFeedback("The Java Virtual Machine (JVM) is out of memory");
             } catch (Exception e) {
+                System.out.println(e);
                 showFeedback(e.getLocalizedMessage());
             } finally {
                 // tells the main application that this process is completed.

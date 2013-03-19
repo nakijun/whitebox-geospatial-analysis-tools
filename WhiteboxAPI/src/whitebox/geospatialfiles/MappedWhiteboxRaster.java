@@ -34,6 +34,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         } else {
             buffer = openDataFile(fileAccess);
         }
+        
         // Need to check if synchronous, if it is fileAccess should be "rwd" for direct
 
     }
@@ -42,7 +43,8 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         try {
             RandomAccessFile raf = new RandomAccessFile(this.dataFile, fileAccess);
             MappedByteBuffer buf = raf.getChannel().map(MapMode.READ_WRITE, 0, raf.length());
-            
+            buf.position(0);
+            buf.order(byteOrder);
             return buf;
         } catch (IOException e) {
             System.out.println(e);
@@ -59,14 +61,18 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             int numCells = numberColumns * numberRows;
             
             MappedByteBuffer buf = raf.getChannel().map(MapMode.READ_WRITE, 0, numCells * cellSizeInBytes);
-            
+            buf.order(byteOrder);
+
+            /*
             if (getDataType() == DataType.FLOAT) {
-                byte[] defaultRow = new byte[numCells * cellSizeInBytes];
+                byte[] defaultRow = new byte[numberColumns * cellSizeInBytes];
                 
-                while (buf.position() < buf.limit()) {
-                    buf.put(defaultRow);
-                }
-            }
+                //while (buf.position() < buf.limit()) {
+                //    buf.put(defaultRow);
+                //}
+            }*/
+            
+            buf.position(0);
             
             return buf;
             
@@ -87,15 +93,36 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     public double getValue(int row, int column) {
         int cellNum = row * numberColumns + column;
         
-        return buffer.getDouble(cellNum);
+        buffer.position(cellNum * cellSizeInBytes);
+        
+        switch (getDataType()) {
+            case BYTE:
+                return buffer.get();
+            case DOUBLE:
+                return buffer.getDouble();
+            case FLOAT:
+                return buffer.getFloat();
+            case INTEGER:
+                return buffer.getInt();
+        }
+        
+        return noDataValue;
     }
 
     @Override
     public void setValue(int row, int column, double value) {
         int cellNum = row * numberColumns + column;
-        
-        //buffer.putDouble(cellNum * cellSizeInBytes, value);
-        buffer.putDouble(cellNum, (float)value);
+
+        switch (getDataType()) {
+            case BYTE:
+                buffer.put(cellNum * cellSizeInBytes, (byte)value);
+            case DOUBLE:
+                buffer.putDouble(cellNum * cellSizeInBytes, value);
+            case FLOAT:
+                buffer.putFloat(cellNum * cellSizeInBytes, (float)value);
+            case INTEGER:
+                buffer.putInt(cellNum * cellSizeInBytes, (int)value);
+        }
     }
 
     @Override

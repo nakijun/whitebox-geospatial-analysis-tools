@@ -406,6 +406,7 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
      * @param row An int stating the zero-based row to be returned.
      * @param vals An array of doubles containing the values store in the specified row.
      */
+    @Override
     public void setRowValues(int row, double[] vals) {
         if (!saveChanges) { return; }
         if (vals.length != numberColumns) { return; } 
