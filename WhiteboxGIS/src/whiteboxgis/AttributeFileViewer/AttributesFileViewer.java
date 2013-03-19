@@ -25,6 +25,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import javax.script.Bindings;
 import javax.script.CompiledScript;
 import javax.script.ScriptException;
@@ -312,7 +313,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         generateData.addActionListener(this);
         generateFieldData.add(generateData);
         
-        menubar.add(generateData);
+        menubar.add(generateFieldData);
         
         return menubar;
     }
@@ -695,9 +696,15 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 try {
                     Object[] rowData = attributeTable.getRecord(row);
                     
-                    if (!data.getClass().isAssignableFrom(rowData[this.generateDataColumnIndex].getClass())) {
+                    if (data != null && !data.getClass().isAssignableFrom(rowData[this.generateDataColumnIndex].getClass())) {
                         // Attempt to convert if not a subclass or equal class
-                        asdfasdf;
+                        try {
+                            data = rowData[this.generateDataColumnIndex].getClass().getConstructor(String.class).newInstance(data.toString());
+                        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                            System.out.println(e);
+                            host.showFeedback("Unable to convert type. Take return type into consideration.");
+                            return;
+                        }
                     }
                     
                     rowData[this.generateDataColumnIndex] = data;
@@ -706,12 +713,12 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                     dataModel.fireTableDataChanged();
                 } catch (DBFException e) {
                     System.out.println(e);
+                    host.showFeedback("Error adding data to database. Make sure assigned valued isn't outside of data type range.");
                 }
-
-                System.out.println(data);
             }
         } catch (ScriptException e) {
             System.out.println(e);
+            host.showFeedback("Error executing script. Check syntax and make sure the desired column value appears on the last line.");
         }
     }
     
