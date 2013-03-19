@@ -14,21 +14,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package whiteboxgis;
+package whiteboxgis.AttributeFileViewer;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
+import javax.script.Bindings;
+import javax.script.CompiledScript;
+import javax.script.ScriptException;
 import javax.swing.*;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
-import org.python.core.PyCode;
-import org.python.core.PyInteger;
-import org.python.core.PyObject;
 import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.shapefile.ShapeFileRecord;
 import whitebox.geospatialfiles.shapefile.ShapeType;
@@ -36,8 +38,9 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField.DBFDataType;
 import whitebox.interfaces.WhiteboxPluginHost;
-import org.python.util.PythonInterpreter;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
+import whiteboxgis.Scripter;
+import whiteboxgis.Scripter.ScriptingLanguage;
 
 /**
  *
@@ -57,9 +60,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private WhiteboxPluginHost host = null;
     private ShapeFile shapeFile = null;
     
-    private JTextField interpField = new JTextField();
-    private JButton evalButton = new JButton();
-    private PythonInterpreter python = new PythonInterpreter();
+    private Scripter scripter = new Scripter(null, true);
+    private int generateDataColumnIndex = -1;
     
     public AttributesFileViewer(Frame owner, boolean modal, String shapeFileName) {
         super(owner, modal);
@@ -100,6 +102,12 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 closeWindow();
             }
         });
+        
+        // Add listener for clicking the generate data button in the scripter
+        scripter.addPropertyChangeListener(Scripter.PROP_GENERATE_DATA, generateDataListener);
+        scripter.addPropertyChangeListener(Scripter.PROP_SCRIPTING_LANGUAGE, languageChangedListener);
+        setScripterDefaultText(scripter.getLanguage());
+        scripter.showGenerateDataButton(true);
 
     }
     
@@ -132,19 +140,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             save.addActionListener(this);
             save.setToolTipText("Save changes to disk");
             box1.add(save);
-            
-            box1.add(interpField);
-            box1.add(evalButton);
-            evalButton.setText("Eval");
-            python.setOut(System.out);
-            evalButton.addActionListener(new ActionListener() {
-
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    python.exec(interpField.getText());
-                }
-                
-            });
             
             box1.add(Box.createHorizontalStrut(100));
             box1.add(Box.createHorizontalGlue());
@@ -333,9 +328,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             case "save":
                 saveChanges();
                 break;
-            case "addFID":
-                addFID();
-                break;
             case "addNewField":
                 tabs.setSelectedIndex(1);
                 addNewField();
@@ -348,6 +340,9 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 break;
             case "addPerimeterField":
                 addPerimeterField();
+                break;
+            case "generateData":
+                showScripter();
                 break;
         }
     }
@@ -412,69 +407,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             }
             
         }
-    }
-    
-    public interface CellGenerator {
-        public Object generate_cell(int index, Object[] cells);
-    }
-    
-    private void addFID() {
-        
-        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
-        
-        DBFField field = new DBFField();
-        field.setName("FID");
-        field.setDataType(DBFField.DBFDataType.NUMERIC);
-        field.setFieldLength(10);
-        field.setDecimalCount(0);
-        
-        fieldModel.createNewField(field);
-        
-        fieldModel.saveChanges();
-        
-        python.exec("def generate_cell(index):\n"
-                                        + "    return index + 1\n"
-                                        + "\n");
-        
-        PyObject generator = python.get("generate_cell");
-        try {
-            for (int i = 0; i < attributeTable.getNumberOfRecords(); i++) {
-                Object[] recData = attributeTable.getRecord(i);
-                PyObject ret = generator.__call__(new PyInteger(i));
-                recData[recData.length - 1] = ((PyInteger) ret).asDouble();
-                attributeTable.changeRecord(i, recData);
-
-            }
-        } catch (DBFException e){
-            System.out.println(e);
-        }
-        try {
-            attributeTable.write();
-        } catch (DBFException e) {
-            System.out.println(e);
-        }
-        //fieldModel.saveChanges();
-        /*try {
-            
-            DBFField field = new DBFField();
-            field.setName("FID");
-            field.setDataType(DBFField.DBFDataType.NUMERIC);
-            field.setFieldLength(10);
-            field.setDecimalCount(0);
-            attributeTable.addField(field);
-            
-            for (int a = 0; a < attributeTable.getNumberOfRecords(); a++) {
-                Object[] recData = attributeTable.getRecord(a);
-                recData[recData.length - 1] = new Double(a);
-                attributeTable.updateRecord(a, recData);
-            }
-            
-            AttributeFileTableModel tableModel = (AttributeFileTableModel)dataTable.getModel();
-            tableModel.fireTableStructureChanged();
-            
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }*/
     }
     
     /**
@@ -655,6 +587,132 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             }
         }
         
+    }
+    
+    
+    private void showScripter() {
+        
+        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+        
+        int fieldCount = fieldModel.getRowCount();
+        
+        Object[] selectionOptions = new Object[fieldCount];
+        
+        for (int i = 0; i < fieldCount; i++) {
+            SelectionIdentifier wrapper = new SelectionIdentifier(i, fieldModel.getValueAt(i, 
+                    fieldModel.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString())));
+            selectionOptions[i] = wrapper;
+            
+        }
+        
+        Object selection = JOptionPane.showInputDialog(this, "Select field", "Generate Column Data", JOptionPane.OK_CANCEL_OPTION, null, selectionOptions, null);
+
+        if (selection != null) {
+            
+            this.generateDataColumnIndex = ((SelectionIdentifier)selection).getIndex();
+
+            scripter.setVisible(true);
+           
+        }
+        
+        
+    }
+    
+    PropertyChangeListener generateDataListener = new PropertyChangeListener() {
+        @Override
+        public void propertyChange(PropertyChangeEvent evt) {
+            generateData(); 
+        }
+    };
+    
+    PropertyChangeListener languageChangedListener = new PropertyChangeListener() {
+
+        @Override
+        public void propertyChange(PropertyChangeEvent evt) {
+            Scripter.ScriptingLanguage lang = (Scripter.ScriptingLanguage)evt.getNewValue();
+            
+            setScripterDefaultText(lang);
+        }
+    };
+    
+    private void setScripterDefaultText(ScriptingLanguage lang) {
+        
+            String default_text = lang.getCommentMarker() + "This script will be run for every row as identified by index.\n"
+                    + lang.getCommentMarker() + "For the row, each column value will be available using the following names:\n";
+            
+            AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+            int fieldCount = fieldModel.getRowCount();
+        
+            default_text += lang.getCommentMarker() + " index\n";
+            
+
+            for (int i = 0; i < fieldCount; i++) {
+                String fieldName = (String)fieldModel.getValueAt(i, 
+                        fieldModel.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString()));
+                
+                default_text += lang.getCommentMarker() + " " + fieldName + "\n";
+            }
+            
+        
+            switch (lang) {
+                case PYTHON:
+                case GROOVY:
+                case JAVASCRIPT:
+                    default_text += "index + 1";
+                    break;
+                
+            }
+            scripter.setEditorText(default_text);
+    }
+    
+    
+    private void generateData() {
+        
+        AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+        AttributeFileTableModel dataModel = (AttributeFileTableModel)dataTable.getModel();
+        int fieldCount = fieldModel.getRowCount();     
+
+        CompiledScript generate_data = scripter.compileScript();
+
+        try {
+            Bindings bindings = scripter.createBindingsObject();
+            
+            for (int row = 0; row < dataModel.getRowCount(); row++) {
+                bindings.put("index", new Integer(row));
+                
+                // Bind each of the variables from the row
+                
+                for (int i = 0; i < fieldCount; i++) {
+                    String fieldName = (String)fieldModel.getValueAt(i, 
+                            fieldModel.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString()));
+                    // Add 2 because we need to skip modified and ID in dataModel
+                    bindings.put(fieldName, dataModel.getValueAt(row, i + 2));
+                    
+                }
+                
+                Object data = generate_data.eval(bindings);
+                
+                try {
+                    Object[] rowData = attributeTable.getRecord(row);
+                    
+                    if (!data.getClass().isAssignableFrom(rowData[this.generateDataColumnIndex].getClass())) {
+                        // Attempt to convert if not a subclass or equal class
+                        asdfasdf;
+                    }
+                    
+                    rowData[this.generateDataColumnIndex] = data;
+                    attributeTable.updateRecord(row, rowData);
+                    
+                    dataModel.fireTableDataChanged();
+                } catch (DBFException e) {
+                    System.out.println(e);
+                }
+
+                System.out.println(data);
+            }
+        } catch (ScriptException e) {
+            System.out.println(e);
+        }
     }
     
 }
