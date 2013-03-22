@@ -36,7 +36,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     String[] pluginArgs;
     long pluginStart = 0;   // nanosecs
     
-    List<Integer> runPluginList = new LinkedList();
+    List<Integer> runAllList = new LinkedList<>();
     
     // Times and corresponding text fields
     long[] times;
@@ -184,8 +184,10 @@ public class TimingProfiler extends javax.swing.JFrame {
             return;
         }
         
+        // We store the nanosec. time, but display seconds.  Truncate to 100ths
+        // seconds, and let Java formatter round to one decimal place for display.
         long execTime = System.nanoTime() - pluginStart;
-        float execSecs = (float) ((float)(execTime/100000000)/10.0);
+        float execSecs = (float) ((float)(execTime/10000000)/100.0);
         
         // NOTE: defer this to Java 8, when WhiteboxPlugin interface can have
         //  a default implementation of "none".  We want the method to be in
@@ -229,8 +231,8 @@ public class TimingProfiler extends javax.swing.JFrame {
      */
     private void runNext() {
                 // If there are most configurations to run, start the next one.
-        if (!runPluginList.isEmpty()) {
-            int nextProcs = runPluginList.remove(0);
+        if (!runAllList.isEmpty()) {
+            int nextProcs = runAllList.remove(0);
             setSelectedProcessors(nextProcs);
             Parallel.setPluginProcessors(nextProcs);
             host.runPlugin(plugin.getName(), pluginArgs);
@@ -769,7 +771,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     }//GEN-LAST:event_rerunToolButtonActionPerformed
 
     private void closeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeButtonActionPerformed
-        runPluginList.clear();
+        runAllList.clear();
         this.dispose();
     }//GEN-LAST:event_closeButtonActionPerformed
 
@@ -787,7 +789,7 @@ public class TimingProfiler extends javax.swing.JFrame {
 
     private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
         
-        for (int i = 1; i < visibleFields; i++) {
+        for (int i = 1; i <= visibleFields; i++) {
             log.append(i + " : " + fields.get(i-1).getText() + System.lineSeparator());
         }
     }//GEN-LAST:event_copyToLogButtonActionPerformed
@@ -824,9 +826,9 @@ public class TimingProfiler extends javax.swing.JFrame {
             
              // Add all processor configurations to run queue.
             int availableProcs = Runtime.getRuntime().availableProcessors();
-            runPluginList.clear();
+            runAllList.clear();
             for (int i = 1; i <= availableProcs; i++) {
-                runPluginList.add(i);
+                runAllList.add(i);
             }
             runNext();
         }
