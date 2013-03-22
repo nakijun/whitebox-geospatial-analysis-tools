@@ -280,7 +280,10 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
         
             pool.shutdown();
             while(!pool.awaitTermination(1, TimeUnit.SECONDS)) { };
-            
+
+            // When all processing finished, display output from first input file
+            returnData(pointFiles[0].replace(".las", " " + args[1].trim() + ".dep"));
+
         } catch (OutOfMemoryError oe) {
             showFeedback("The Java Virtual Machine (JVM) is out of memory");
         } catch (Exception e) {
@@ -740,21 +743,12 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
                     progress = (int) (100d * numFilesCompleted / numPointFiles);
                     updateProgress("Progress", progress);
                 }
-                
-                //Only display the last of all of the LAS file interpolations
-                if(shouldDisplay == true){
-                    returnData(pointFile.replace(".las", suffix + ".dep"));
-                }
 
             } catch (OutOfMemoryError oe) {
                 showFeedback("The Java Virtual Machine (JVM) is out of memory");
             } catch (Exception e) {
                 System.out.println(e);
                 showFeedback(e.getLocalizedMessage());
-            } finally {
-                // tells the main application that this process is completed.
-                amIActive = false;
-                myHost.pluginComplete();
             }
             
         }    
