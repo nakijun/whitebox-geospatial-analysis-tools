@@ -258,7 +258,7 @@ public class AttributeTable {
             
             // Copy all fields before insertAt            
             System.arraycopy(inFields, 0, outFields, 0, insertAt);
-            
+                        
             // Copy new field
             outFields[insertAt] = field;           
             
@@ -1100,12 +1100,11 @@ public class AttributeTable {
                 }
                 
             }
-            //raf = new RandomAccessFile(this.fileName, "rw");
-            raf.seek(raf.length() - 1);
+            
+            raf.seek(raf.length());
             raf.write(buf.array());
             
             raf.seek(raf.length());
-            raf.writeByte(END_OF_DATA);
             
         } catch (IOException e) {
             throw new DBFException(e.getMessage());
@@ -1121,7 +1120,8 @@ public class AttributeTable {
                     Object[] t_values = (Object[]) recordData.get(i);
                     writeRecord(raf, t_values);
                 }
-                
+                raf.writeByte(END_OF_DATA);
+                numberOfRecords = recordData.size();
                 recordData.clear();
             }
             
