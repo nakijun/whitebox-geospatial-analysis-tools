@@ -61,7 +61,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private WhiteboxPluginHost host = null;
     private ShapeFile shapeFile = null;
     
-    private Scripter scripter = new Scripter(null, true);
+    private Scripter scripter = null;
     private int generateDataColumnIndex = -1;
     
     public AttributesFileViewer(Frame owner, boolean modal, String shapeFileName) {
@@ -104,12 +104,20 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             }
         });
         
-        // Add listener for clicking the generate data button in the scripter
-        scripter.addPropertyChangeListener(Scripter.PROP_GENERATE_DATA, generateDataListener);
-        scripter.addPropertyChangeListener(Scripter.PROP_SCRIPTING_LANGUAGE, languageChangedListener);
-        setScripterDefaultText(scripter.getLanguage());
-        scripter.showGenerateDataButton(true);
+        // Throwing this on the EDT to allow the window to pop up faster
+        SwingUtilities.invokeLater(new Runnable() {
 
+            @Override
+            public void run() {
+                scripter = new Scripter(null, true);
+                // Add listener for clicking the generate data button in the scripter
+                scripter.addPropertyChangeListener(Scripter.PROP_GENERATE_DATA, generateDataListener);
+                scripter.addPropertyChangeListener(Scripter.PROP_SCRIPTING_LANGUAGE, languageChangedListener);
+                setScripterDefaultText(scripter.getLanguage());
+                scripter.showGenerateDataButton(true);
+            }
+        });
+        
     }
     
     private void createGui() {
@@ -196,17 +204,18 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         JTable table = new JTable(new AttributeFileTableModel(attributeTable)) {
 
             @Override
-            public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
-                Component comp = super.prepareRenderer(renderer, Index_row, Index_col);
+            public Component prepareRenderer(TableCellRenderer renderer, int index_row, int index_col) {
+                Component comp = super.prepareRenderer(renderer, index_row, index_col);
                 //even index, selected or not selected
-                if (Index_row % 2 == 0) {// && !isCellSelected(Index_row, Index_col)) {
+                
+                if (index_row % 2 == 0) {
                     comp.setBackground(Color.WHITE);
                     comp.setForeground(Color.BLACK);
                 } else {
                     comp.setBackground(new Color(225, 245, 255)); //new Color(210, 230, 255));
                     comp.setForeground(Color.BLACK);
                 }
-                if (isCellSelected(Index_row, Index_col)) {
+                if (isCellSelected(index_row, index_col)) {
                     comp.setForeground(Color.RED);
                 }
                 return comp;
@@ -215,6 +224,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
 
         table.setAutoCreateRowSorter(true);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.setAutoCreateColumnsFromModel(false);
+        table.getTableHeader().setReorderingAllowed(false);
         TableColumn column;
 
         for (int i = 0; i < table.getColumnCount(); i++) {
@@ -393,7 +404,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         
         if (!fieldModel.isSaved()) {
             tabs.setSelectedIndex(1);
-            int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to fields? Warning: This operation can take a long time.", 
+            int option = JOptionPane.showOptionDialog(rootPane, "Are you sure you want to save changes to fields?", 
                 "Save Field Changes?", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
             if (option == JOptionPane.OK_OPTION) {
                 
@@ -622,7 +633,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     PropertyChangeListener generateDataListener = new PropertyChangeListener() {
         @Override
         public void propertyChange(PropertyChangeEvent evt) {
-            generateData(); 
+            generateData();
+            scripter.setVisible(false);
         }
     };
     
@@ -707,15 +719,14 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                         }
                     }
                     
-                    rowData[this.generateDataColumnIndex] = data;
-                    attributeTable.updateRecord(row, rowData);
-                    
-                    dataModel.fireTableDataChanged();
+                    dataModel.setValueAt(data, row, 2 + this.generateDataColumnIndex);
+
                 } catch (DBFException e) {
                     System.out.println(e);
                     host.showFeedback("Error adding data to database. Make sure assigned valued isn't outside of data type range.");
                 }
             }
+            
         } catch (ScriptException e) {
             System.out.println(e);
             host.showFeedback("Error executing script. Check syntax and make sure the desired column value appears on the last line.");

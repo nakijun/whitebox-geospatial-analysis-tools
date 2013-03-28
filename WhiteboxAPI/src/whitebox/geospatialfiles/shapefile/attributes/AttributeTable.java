@@ -41,7 +41,7 @@ public class AttributeTable {
     public AttributeTable(String fileName) throws IOException {
         this.signature = SIG_DBASE_III;
         this.terminator1 = 0x0D;
-        
+                
         this.fileName = fileName;
         initialize();
     }
@@ -1104,7 +1104,7 @@ public class AttributeTable {
             raf.seek(raf.length());
             raf.write(buf.array());
             
-            raf.seek(raf.length());
+            //raf.seek(raf.length());
             
         } catch (IOException e) {
             throw new DBFException(e.getMessage());
@@ -1121,7 +1121,6 @@ public class AttributeTable {
                     writeRecord(raf, t_values);
                 }
                 raf.writeByte(END_OF_DATA);
-                numberOfRecords = recordData.size();
                 recordData.clear();
             }
             
@@ -1212,8 +1211,7 @@ public class AttributeTable {
         raf.writeByte(month); /* 2 */
         raf.writeByte(day);   /* 3 */
 
-        numberOfRecords = Utils.littleEndian(numberOfRecords);
-        raf.writeInt(numberOfRecords); /* 4-7 */
+        raf.writeInt(Utils.littleEndian(numberOfRecords)); /* 4-7 */
 
         headerLength = findHeaderLength();
         raf.writeShort(Utils.littleEndian(headerLength)); /* 8-9 */
