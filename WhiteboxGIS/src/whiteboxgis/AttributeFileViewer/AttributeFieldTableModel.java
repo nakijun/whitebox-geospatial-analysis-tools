@@ -8,11 +8,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import javax.swing.table.AbstractTableModel;
 import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
@@ -28,8 +26,9 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     
     private AttributeTable attributeTable;
     
-    private static final String MODIFIED_INDICATOR = "*";
-    private static final String NOT_MODIFIED_INDICATOR = "";
+    private static final String REMOVED_STRING = "Deleted";
+    private static final String ADDED_STRING = "New";
+    private static final String NOT_MODIFIED_STRING = "";
     
     // To keep track of changes to existing fields
     private HashMap<Integer, DBFField> newFields = new HashMap<>();
@@ -37,11 +36,11 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     private HashMap<Integer, DBFField> deletedFields = new HashMap<>();
     
     protected enum ColumnName {
-        MODIFIED("", String.class),
         NAME("Name", String.class), 
         TYPE("Type", DBFDataType.class), 
         LENGTH("Length", Integer.class), 
-        PRECISION("Precision", Integer.class);
+        PRECISION("Precision", Integer.class),
+        MODIFIED("Modified", String.class);
         
         public static final int size = ColumnName.values().length;
         
@@ -81,7 +80,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
     @Override
     public int getRowCount() {
-        return attributeTable.getFieldCount() + newFields.size() - deletedFields.size();
+        return attributeTable.getFieldCount() + newFields.size();
     }
 
     @Override
@@ -103,12 +102,12 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     public boolean isCellEditable(int rowIndex, int columnIndex) {
         
         // Modified column isn't editable
-        if (columnIndex == 0) {
+        if (ColumnName.fromColumnIndex(columnIndex) == ColumnName.MODIFIED) {
             return false;
         }
         
         // Only allow new fields to be edited until edit functionality is added
-        DBFField row = newFields.get(getActualRow(rowIndex));
+        DBFField row = newFields.get(rowIndex);
         if (row != null) {
             if (row.getDataType() == DBFDataType.DATE) {
                 if (ColumnName.fromColumnIndex(columnIndex) != ColumnName.LENGTH 
@@ -124,49 +123,25 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         
     }
     
-    /**
-     * Returns the actual index of the underlying attribute table fields that
-     * represented the model's index. Deleted fields are only hidden in the model
-     * but are still represented in the attribute table.
-     * @param rowIndex
-     * @return 
-     */
-    private int getActualRow(int rowIndex) {
-        
-        List<Integer> keyList = new ArrayList(deletedFields.keySet());
-        Collections.sort(keyList);
-
-        int actualIndex = rowIndex;
-        for (int deletedRow : keyList) {
-            if (deletedRow <= actualIndex) {
-                actualIndex++;
-            }
-        }
-        
-        return actualIndex;
-    }
-    
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         
-        int actualIndex = getActualRow(rowIndex);
-        
         DBFField field = null;
-        if (actualIndex >= attributeTable.getFieldCount() || columnIndex >= ColumnName.size) {
+        if (rowIndex >= attributeTable.getFieldCount() || columnIndex >= ColumnName.size) {
             // If it exists in newFields, it will be returned. Null will be returned otherwise.
-            field = newFields.get(actualIndex);
+            field = newFields.get(rowIndex);
             if (field == null) {
                 return null;
             }
             switch (ColumnName.fromColumnIndex(columnIndex)) {
                 case MODIFIED:
-                    return MODIFIED_INDICATOR;
+                    return ADDED_STRING;
                 
             }
         }
                
         if (field == null) {
-            field = attributeTable.getField(actualIndex);       
+            field = attributeTable.getField(rowIndex);       
             if (field == null) {
                 return null;
             }
@@ -174,7 +149,11 @@ public class AttributeFieldTableModel extends AbstractTableModel {
 
         switch (ColumnName.fromColumnIndex(columnIndex)) {
             case MODIFIED:
-                return NOT_MODIFIED_INDICATOR;
+                if (deletedFields.containsKey(rowIndex)) {
+                    return REMOVED_STRING;
+                } else {
+                    return NOT_MODIFIED_STRING;
+                }
             case NAME:
                 return field.getName();
             case TYPE:
@@ -203,13 +182,11 @@ public class AttributeFieldTableModel extends AbstractTableModel {
     @Override
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
         
-        int actualRowIndex = getActualRow(rowIndex);
-        
         DBFField row;
-        if (newFields.containsKey(actualRowIndex)) {
-            row = newFields.get(actualRowIndex);
+        if (newFields.containsKey(rowIndex)) {
+            row = newFields.get(rowIndex);
         } else {
-            row = attributeTable.getField(actualRowIndex);
+            row = attributeTable.getField(rowIndex);
         }
         
         ColumnName column = ColumnName.fromColumnIndex(columnIndex); 
@@ -250,7 +227,7 @@ public class AttributeFieldTableModel extends AbstractTableModel {
      */
     public void createNewField(DBFField field) {
         if (field != null) {
-            int index = getActualRow(getRowCount());
+            int index = getRowCount();
             newFields.put(index, field);
             fireTableRowsInserted(index, index);
         }
@@ -266,19 +243,30 @@ public class AttributeFieldTableModel extends AbstractTableModel {
             return;
         }
         
-        int actualRow = getActualRow(fieldIndex);
-        
-        if (newFields.containsKey(actualRow)) {
+        if (newFields.containsKey(fieldIndex)) {
             // Delete a field that doesn't exist in the data yet
-            newFields.remove(actualRow);
+            newFields.remove(fieldIndex);
         } else {
             // Hide the field and mark for deletion
-            DBFField deletedField = attributeTable.getField(actualRow);
-            deletedFields.put(actualRow, deletedField);
+            DBFField deletedField = attributeTable.getField(fieldIndex);
+            deletedFields.put(fieldIndex, deletedField);
         }
         
-        fireTableRowsDeleted(fieldIndex, fieldIndex);
+        fireTableRowsUpdated(fieldIndex, fieldIndex);
         
+    }
+    
+    /**
+     * Reverts all changes to the given row.
+     * @param row 
+     */
+    public void revertRow(int row) {
+        
+        newFields.remove(row);
+        
+        deletedFields.remove(row);
+        
+        fireTableRowsUpdated(row, row);
     }
     
     /**
@@ -347,5 +335,21 @@ public class AttributeFieldTableModel extends AbstractTableModel {
         } else {
             return false;
         }
+    }
+    
+    
+    /**
+     * Returns true if the row for the given rowIndex is modified.
+     * @param row
+     * @return True if the row is modified.
+     */
+    public boolean isModified(int rowIndex) {
+        if (newFields.containsKey(rowIndex)) {
+            return true;
+        } else if (deletedFields.containsKey(rowIndex)) {
+            return true;
+        }
+        
+        return false;
     }
 }

@@ -196,6 +196,18 @@ public class AttributeFileTableModel extends AbstractTableModel {
     }
     
     /**
+     * Reverts all changes to the given row.
+     * @param row 
+     */
+    public void revertRow(int row) {
+        
+        // Remove row from changedRows    
+        changedRows.remove(row);
+        
+        fireTableRowsUpdated(row, row);
+    }
+    
+    /**
      * Method to signal from the view to the model that changes to row values should
      * be saved to disk.
      * @return True if all changes were saved and false if some changes couldn't
@@ -239,4 +251,16 @@ public class AttributeFileTableModel extends AbstractTableModel {
         }
     }
     
+    /**
+     * Returns true if the row for the given rowIndex is modified.
+     * @param row
+     * @return True if the row is modified.
+     */
+    public boolean isModified(int rowIndex) {
+        if (changedRows.containsKey(rowIndex)) {
+            return true;
+        }
+        
+        return false;
+    }
 }

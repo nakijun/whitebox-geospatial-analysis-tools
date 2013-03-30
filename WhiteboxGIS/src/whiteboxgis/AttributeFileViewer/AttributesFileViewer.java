@@ -19,6 +19,8 @@ package whiteboxgis.AttributeFileViewer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
@@ -32,6 +34,7 @@ import javax.script.ScriptException;
 import javax.swing.*;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.shapefile.ShapeFileRecord;
 import whitebox.geospatialfiles.shapefile.ShapeType;
@@ -52,7 +55,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     private String dbfFileName = "";
     private String shapeFileName = "";
    
-
     private AttributeTable attributeTable;
     //private JButton edit = new JButton("Edit");
     private JTable dataTable = new JTable();
@@ -201,7 +203,8 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private JTable getDataTable() {
         
-        JTable table = new JTable(new AttributeFileTableModel(attributeTable)) {
+        final AttributeFileTableModel model = new AttributeFileTableModel(attributeTable);
+        final JTable table = new JTable(model) {
 
             @Override
             public Component prepareRenderer(TableCellRenderer renderer, int index_row, int index_col) {
@@ -220,16 +223,17 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 }
                 return comp;
             }
+            
+            
         };
 
         table.setAutoCreateRowSorter(true);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        table.setAutoCreateColumnsFromModel(false);
         table.getTableHeader().setReorderingAllowed(false);
         TableColumn column;
-
+        TableColumnModel columnModel = table.getColumnModel();
         for (int i = 0; i < table.getColumnCount(); i++) {
-            column = table.getColumnModel().getColumn(i);
+            column = columnModel.getColumn(i);
             if (i == 0) {
                 column.setPreferredWidth(10);
             } else if (i == 1) {
@@ -239,12 +243,43 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             }
         }
         
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handleEvent(e);
+            }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handleEvent(e);
+            }
+            
+            private void handleEvent(MouseEvent e) {
+                int r = table.rowAtPoint(e.getPoint());
+                if (r >= 0 && r < table.getRowCount()) {
+                    table.setRowSelectionInterval(r, r);
+                } else {
+                    table.clearSelection();
+                }
+
+                int rowIndex = table.getSelectedRow();
+                if (rowIndex < 0) {
+                    return;
+                }
+                if (e.isPopupTrigger() && e.getComponent() instanceof JTable ) {
+                    JPopupMenu popup = createDataRevertPopup(model, rowIndex);
+                    popup.show(e.getComponent(), e.getX(), e.getY());
+                }
+            }
+        });
+        
         return table;
     }
     
     private JTable getFieldTable() {
 
-        JTable table = new JTable(new AttributeFieldTableModel(attributeTable)) {
+        final AttributeFieldTableModel model = new AttributeFieldTableModel(attributeTable);
+        final JTable table = new JTable(model) {
 
             @Override
             public Component prepareRenderer(TableCellRenderer renderer, int Index_row, int Index_col) {
@@ -274,18 +309,110 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         typeColumn.setCellEditor(new DefaultCellEditor(typeComboBox));
         
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);        
-        int modifiedColIndex = AttributeFieldTableModel.ColumnName.MODIFIED.ordinal();
-        TableColumn modifiedColumn = table.getColumnModel().getColumn(modifiedColIndex);
-        modifiedColumn.setPreferredWidth(10);
+
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handleEvent(e);
+            }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handleEvent(e);
+            }
+            
+            private void handleEvent(MouseEvent e) {
+                int r = table.rowAtPoint(e.getPoint());
+                if (r >= 0 && r < table.getRowCount()) {
+                    table.setRowSelectionInterval(r, r);
+                } else {
+                    table.clearSelection();
+                }
+
+                int rowIndex = table.getSelectedRow();
+                if (rowIndex < 0) {
+                    return;
+                }
+                if (e.isPopupTrigger() && e.getComponent() instanceof JTable ) {
+                    JPopupMenu popup = createFieldRevertPopup(model, rowIndex);
+                    popup.show(e.getComponent(), e.getX(), e.getY());
+                }
+            }
+        });
 
         return table;
+    }
+    
+        /**
+     * Displays a popup window for data table at row and will revert all unsaved 
+     * commands on that row.
+     * @param row 
+     */
+    private JPopupMenu createDataRevertPopup(final AttributeFileTableModel model, final int row) {
+        
+        JPopupMenu popup = new JPopupMenu();
+        JMenuItem revertItem = new JMenuItem("Revert Changes");
+        
+        if (model.isModified(row)) {
+            revertItem.addActionListener(new ActionListener() {
+
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    model.revertRow(row);
+                }
+            });
+        } else {
+            revertItem.setEnabled(false);
+        }
+        
+        popup.add(revertItem);
+        
+        return popup;
+    }
+    
+    /**
+     * Displays a popup window for field table at row and will revert all unsaved 
+     * commands on that row.
+     * @param row 
+     */
+    private JPopupMenu createFieldRevertPopup(final AttributeFieldTableModel model, final int row) {
+        
+        JPopupMenu popup = new JPopupMenu();
+        JMenuItem revertItem = new JMenuItem("Revert Changes");
+        
+        if (model.isModified(row)) {
+            revertItem.addActionListener(new ActionListener() {
+
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    model.revertRow(row);
+                }
+            });
+        } else {
+            revertItem.setEnabled(false);
+        }
+        
+        popup.add(revertItem);
+        
+        JMenuItem deleteItem = new JMenuItem("Delete Field");
+        deleteItem.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                model.deleteField(row);
+            }
+        });
+        
+        popup.add(deleteItem);
+        
+        return popup;
     }
 
     private JMenuBar createMenu() {
         JMenuBar menubar = new JMenuBar();
 
         // Add Field menu
-        JMenu addFieldMenu = new JMenu("Add Field");
+        JMenu addFieldMenu = new JMenu("Edit Fields");
         
         JMenuItem addNewField = new JMenuItem("Add New Field");
         addNewField.setActionCommand("addNewField");
@@ -296,11 +423,6 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         deleteField.setActionCommand("deleteField");
         deleteField.addActionListener(this);
         addFieldMenu.add(deleteField);
-        
-        JMenuItem addFID = new JMenuItem("Add FID");
-        addFID.setActionCommand("addFID");
-        addFID.addActionListener(this);
-        addFieldMenu.add(addFID);
         
         if (shapeFile.getShapeType().getBaseType() == ShapeType.POLYGON) {
             JMenuItem addAreaField = new JMenuItem("Add Area Field");
@@ -396,7 +518,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 
                 boolean success = dataModel.saveChanges();
                 if (!success) {
-                    JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
                 }
                 dataModel.fireTableDataChanged();
             }
@@ -410,7 +532,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
                 
                 boolean success = fieldModel.saveChanges();
                 if (!success) {
-                    JOptionPane.showMessageDialog(rootPane, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Error saving database file. Some changes have not been saved.", "Error Saving", JOptionPane.ERROR_MESSAGE);
                 }
                 
                 fieldModel.fireTableDataChanged();
@@ -558,9 +680,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             }
             double perimeter;
             int recNum;
-            //double numRecordsDone = 0;
-            //int progress = 0;
-            //double numRecords = shapeFile.getNumberOfRecords();
+
             DBFField field = new DBFField();
             field.setName("Perimeter");
             field.setDataType(DBFField.DBFDataType.NUMERIC);
@@ -601,10 +721,22 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
         
     }
     
-    
+    /**
+     * Prompts the user for which column they want to modify then shows the
+     * Scripter dialog that allows them to generate data for that column. The field model
+     * must be saved before this can be run in so that data can be generated for
+     * a new column.
+     */
     private void showScripter() {
         
         AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
+        
+        if (!fieldModel.isSaved()) {
+            JOptionPane.showMessageDialog(this, 
+                    "The file must be saved before you can generate data for the table", 
+                    "Save to Continue", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
         
         int fieldCount = fieldModel.getRowCount();
         
