@@ -756,6 +756,7 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
             this.generateDataColumnIndex = ((SelectionIdentifier)selection).getIndex();
 
             scripter.setVisible(true);
+            
            
         }
         
@@ -782,28 +783,15 @@ public class AttributesFileViewer extends JDialog implements ActionListener {
     
     private void setScripterDefaultText(ScriptingLanguage lang) {
         
-            String default_text = lang.getCommentMarker() + "This script will be run for every row as identified by index.\n"
-                    + lang.getCommentMarker() + "For the row, each column value will be available using the following names:\n";
-            
-            AttributeFieldTableModel fieldModel = (AttributeFieldTableModel)fieldTable.getModel();
-            int fieldCount = fieldModel.getRowCount();
-        
-            default_text += lang.getCommentMarker() + " index\n";
-            
-
-            for (int i = 0; i < fieldCount; i++) {
-                String fieldName = (String)fieldModel.getValueAt(i, 
-                        fieldModel.findColumn(AttributeFieldTableModel.ColumnName.NAME.toString()));
-                
-                default_text += lang.getCommentMarker() + " " + fieldName + "\n";
-            }
-            
+            String default_text = lang.getCommentMarker() + " This script will be run for every row as identified by index. \n"
+                    + lang.getCommentMarker() + " The last line of the script will be used as the value for the column. \n"
+                    + lang.getCommentMarker() + " The other columns' values will be bound to variables of the same name (case sensitive). \n";
         
             switch (lang) {
                 case PYTHON:
                 case GROOVY:
                 case JAVASCRIPT:
-                    default_text += "index + 1";
+                    default_text += "ID + 1";
                     break;
                 
             }
