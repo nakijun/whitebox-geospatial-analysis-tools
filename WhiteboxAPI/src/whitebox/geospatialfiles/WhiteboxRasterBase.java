@@ -29,6 +29,8 @@ public abstract class WhiteboxRasterBase {
     // ***********************************
     // Property getter and setter methods.
     // ***********************************
+    
+    protected double initialValue;
 
     protected String headerFile;
     protected String shortHeaderName = null;

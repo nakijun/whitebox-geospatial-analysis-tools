@@ -40,7 +40,6 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
     private int blockSize = 0;
     private long blockStartingCell = 0;
     private long blockEndingCell = -1;
-    private double initialValue;
     private boolean isDirty = false;
 
     /**

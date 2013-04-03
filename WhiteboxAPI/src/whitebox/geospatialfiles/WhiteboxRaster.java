@@ -10,14 +10,15 @@ package whitebox.geospatialfiles;
  * the standard for all raster image use.
  * @author Kevin Green <kevin.a.green@gmail.com>
  */
-public class WhiteboxRaster extends RandomAccessWhiteboxRaster {
+public class WhiteboxRaster extends MappedWhiteboxRaster {
     
     public WhiteboxRaster(String HeaderFile, String FileAccess) {
         super(HeaderFile, FileAccess);
     }
     
     public WhiteboxRaster(String HeaderFile, String FileAccess, double BufferSize) {
-        super(HeaderFile, FileAccess, BufferSize);
+        //super(HeaderFile, FileAccess, BufferSize);
+        super(HeaderFile, FileAccess);
     }
     
      public WhiteboxRaster(String HeaderFile, String FileAccess, String BaseRasterHeader, DataType dataType, double InitialValue) {
@@ -25,7 +26,7 @@ public class WhiteboxRaster extends RandomAccessWhiteboxRaster {
      }
         
      public WhiteboxRaster(String HeaderFile, String FileAccess, String BaseRasterHeader, DataType dataType, double InitialValue, double BufferSize) {
-         super(HeaderFile, FileAccess, BaseRasterHeader, dataType, InitialValue, BufferSize);
+         super(HeaderFile, FileAccess, BaseRasterHeader, dataType, InitialValue);
      }  
      
      public WhiteboxRaster(String HeaderFile, double north, double south, double east, double west, int rows, int cols, DataScale dataScale, DataType dataType, double initialValue, double noData) {

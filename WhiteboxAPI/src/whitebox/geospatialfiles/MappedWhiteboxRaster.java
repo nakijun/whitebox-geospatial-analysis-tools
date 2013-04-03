@@ -1,7 +1,6 @@
 package whitebox.geospatialfiles;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -19,7 +18,10 @@ import java.nio.channels.FileChannel.MapMode;
 public class MappedWhiteboxRaster extends WhiteboxRasterBase implements WhiteboxRasterInterface {   
     
     private MappedByteBuffer buffer;
-    private FloatBuffer fb;
+    
+    public MappedWhiteboxRaster(String headerFile, String fileAccess) {
+        this(headerFile, fileAccess, false);
+    }
     
     public MappedWhiteboxRaster(String headerFile, String fileAccess, boolean overwrite) {
         this.headerFile = headerFile;    
@@ -37,6 +39,55 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         
         // Need to check if synchronous, if it is fileAccess should be "rwd" for direct
 
+    }
+    
+    public MappedWhiteboxRaster(String headerFile, String fileAccess, String baseRasterHeader, DataType dataType, double initialValue) {
+        this.headerFile = headerFile;    
+        this.dataFile = headerFile.replace(".dep", ".tas");
+        this.statsFile = headerFile.replace(".dep", ".wstat");
+        readHeaderFile();
+        setFileAccess(fileAccess);
+        
+        File file = new File(dataFile);
+        if (!file.exists()) {
+            buffer = createNewDataFile(fileAccess);
+        } else {
+            buffer = openDataFile(fileAccess);
+        }
+        
+        setPropertiesUsingAnotherRaster(baseRasterHeader, dataType);
+        
+        
+        this.initialValue = initialValue;
+        
+        
+        
+    }
+    
+    public MappedWhiteboxRaster(String headerFile, double north, double south, double east, double west, int rows, int cols, DataScale dataScale, DataType dataType, double initialValue, double noData) {
+        this.headerFile = headerFile;
+        dataFile = headerFile.replace(".dep", ".tas");
+        statsFile = headerFile.replace(".dep", ".wstat");
+        File f1 = new File(this.headerFile);
+        f1.delete();
+        f1 = new File(this.dataFile);
+        f1.delete();
+        f1 = new File(this.statsFile);
+        f1.delete();
+        
+        this.north = north;
+        this.south = south;
+        this.east = east;
+        this.west = west;
+        this.numberRows = rows;
+        this.numberColumns = cols;
+        this.dataScale = dataScale;
+        setDataType(dataType);
+        this.noDataValue = noData;
+        writeHeaderFile();
+        
+        this.initialValue = initialValue;
+        setFileAccess("rw");
     }
     
     private MappedByteBuffer openDataFile(String fileAccess) {
@@ -58,7 +109,8 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         try {
             RandomAccessFile raf = new RandomAccessFile(this.dataFile, fileAccess);
 
-            int numCells = numberColumns * numberRows;
+            // Although the size can't be > max int, use a long to prevent overflow error
+            long numCells = numberColumns * numberRows;
             
             MappedByteBuffer buf = raf.getChannel().map(MapMode.READ_WRITE, 0, numCells * cellSizeInBytes);
             buf.order(byteOrder);
@@ -93,7 +145,12 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     public double getValue(int row, int column) {
         int cellNum = row * numberColumns + column;
         
-        buffer.position(cellNum * cellSizeInBytes);
+        try {
+            buffer.position(cellNum * cellSizeInBytes);
+        } catch (IllegalArgumentException e) {
+            // The cell number is outside the bounds of this buffer
+            return noDataValue;
+        }
         
         switch (getDataType()) {
             case BYTE:
@@ -116,12 +173,16 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         switch (getDataType()) {
             case BYTE:
                 buffer.put(cellNum * cellSizeInBytes, (byte)value);
+                break;
             case DOUBLE:
                 buffer.putDouble(cellNum * cellSizeInBytes, value);
+                break;
             case FLOAT:
                 buffer.putFloat(cellNum * cellSizeInBytes, (float)value);
+                break;
             case INTEGER:
                 buffer.putInt(cellNum * cellSizeInBytes, (int)value);
+                break;
         }
     }
 
