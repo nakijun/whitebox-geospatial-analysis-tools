@@ -48,10 +48,6 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
      */
     public boolean isTemporaryFile = false;
     
-    /**
-     * Set to true when the getValue function should reflect beyond the edges.
-     */
-    public boolean isReflectedAtEdges = false;
     
     // ************************
     // Constructors

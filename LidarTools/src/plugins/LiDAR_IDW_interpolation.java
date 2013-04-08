@@ -287,6 +287,7 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
         } catch (OutOfMemoryError oe) {
             showFeedback("The Java Virtual Machine (JVM) is out of memory");
         } catch (Exception e) {
+            e.printStackTrace();
             showFeedback(e.getMessage());
         } finally {
             updateProgress("Progress: ", 0);
@@ -736,19 +737,20 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
                 image.addMetadataEntry("Created on " + new Date());
 
                 image.close();
-                
+
+            } catch (OutOfMemoryError oe) {
+                showFeedback("The Java Virtual Machine (JVM) is out of memory");
+            } catch (Exception e) {
+                e.printStackTrace();
+                showFeedback(e.getLocalizedMessage());
+            } finally {
+                // Even if the file fails, count it as completed
                 //Udpate the progress bar
                 synchronized(numFilesCompleted){
                     numFilesCompleted +=1;
                     progress = (int) (100d * numFilesCompleted / numPointFiles);
                     updateProgress("Progress", progress);
                 }
-
-            } catch (OutOfMemoryError oe) {
-                showFeedback("The Java Virtual Machine (JVM) is out of memory");
-            } catch (Exception e) {
-                System.out.println(e);
-                showFeedback(e.getLocalizedMessage());
             }
             
         }    

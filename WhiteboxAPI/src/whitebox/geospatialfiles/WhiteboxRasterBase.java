@@ -31,6 +31,10 @@ public abstract class WhiteboxRasterBase {
     // ***********************************
     
     protected double initialValue;
+    /**
+     * Set to true when the getValue function should reflect beyond the edges.
+     */
+    public boolean isReflectedAtEdges = false;
 
     protected String headerFile;
     protected String shortHeaderName = null;

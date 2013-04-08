@@ -391,7 +391,7 @@ public class ExtractValleysLowerQuartile implements WhiteboxPlugin {
             double[] data;
             double largeValue = Float.POSITIVE_INFINITY;
             int lowerQuartile;
-            double outputNoData = -32768; // TODO: make this with const
+            double outputNoData = Short.MIN_VALUE;
             int col;
                         
             int rowOuts[] = new int[cols];
