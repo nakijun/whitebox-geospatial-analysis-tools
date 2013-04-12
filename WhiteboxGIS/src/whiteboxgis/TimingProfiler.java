@@ -285,7 +285,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         jTextField15 = new javax.swing.JTextField();
         procBtn16 = new javax.swing.JRadioButton();
         jTextField16 = new javax.swing.JTextField();
-        setProcessorsButton = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         copyToLogButton = new javax.swing.JButton();
         clearTimesButton = new javax.swing.JButton();
@@ -328,6 +327,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn1);
         procBtn1.setText("1");
+        procBtn1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
@@ -348,6 +352,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn2);
         procBtn2.setText("2");
+        procBtn2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 3;
@@ -368,6 +377,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn3);
         procBtn3.setText("3");
+        procBtn3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 5;
@@ -388,6 +402,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn4);
         procBtn4.setText("4");
+        procBtn4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 7;
@@ -407,6 +426,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn5);
         procBtn5.setText("5");
+        procBtn5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 1;
@@ -427,6 +451,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn6);
         procBtn6.setText("6");
+        procBtn6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 3;
@@ -447,6 +476,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn7);
         procBtn7.setText("7");
+        procBtn7.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 5;
@@ -467,6 +501,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn8);
         procBtn8.setText("8");
+        procBtn8.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 7;
@@ -487,6 +526,11 @@ public class TimingProfiler extends javax.swing.JFrame {
         selectProcsGrp.add(procBtn9);
         procBtn9.setText("9  ");
         procBtn9.setActionCommand("9");
+        procBtn9.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 1;
@@ -507,6 +551,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn10);
         procBtn10.setText("10");
+        procBtn10.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 3;
@@ -527,6 +576,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn11);
         procBtn11.setText("11");
+        procBtn11.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 5;
@@ -547,6 +601,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn12);
         procBtn12.setText("12");
+        procBtn12.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 7;
@@ -566,6 +625,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn13);
         procBtn13.setText("13");
+        procBtn13.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 1;
@@ -586,6 +650,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn14);
         procBtn14.setText("14");
+        procBtn14.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 3;
@@ -606,6 +675,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn15);
         procBtn15.setText("15");
+        procBtn15.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 5;
@@ -626,6 +700,11 @@ public class TimingProfiler extends javax.swing.JFrame {
 
         selectProcsGrp.add(procBtn16);
         procBtn16.setText("16");
+        procBtn16.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                numProcessorsButtonClicked(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 7;
@@ -642,17 +721,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.ipadx = 74;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTHWEST;
         jPanel1.add(jTextField16, gridBagConstraints);
-
-        setProcessorsButton.setText("Set Processors");
-        setProcessorsButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                setProcessorsButtonActionPerformed(evt);
-            }
-        });
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 8;
-        gridBagConstraints.gridy = 7;
-        jPanel1.add(setProcessorsButton, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -834,9 +902,9 @@ public class TimingProfiler extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_runAllButtonActionPerformed
 
-    private void setProcessorsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setProcessorsButtonActionPerformed
-        Parallel.setPluginProcessors(getSelectedProcessors());
-    }//GEN-LAST:event_setProcessorsButtonActionPerformed
+    private void numProcessorsButtonClicked(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_numProcessorsButtonClicked
+        Parallel.setPluginProcessors(this.getSelectedProcessors());
+    }//GEN-LAST:event_numProcessorsButtonClicked
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -889,6 +957,5 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JButton runAllButton;
     private javax.swing.JButton saveLogToFileButton;
     private javax.swing.ButtonGroup selectProcsGrp;
-    private javax.swing.JButton setProcessorsButton;
     // End of variables declaration//GEN-END:variables
 }
