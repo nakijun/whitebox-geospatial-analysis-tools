@@ -3,11 +3,7 @@ package whitebox.geospatialfiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +17,9 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     
     private List<MappedByteBuffer> buffers;
     
-    private static final int MAX_BUFFER_SIZE = 16777216; // 2^24 
+    private static final int MAX_BUFFER_SIZE = 16777216; // 16MB = 2^24
+    
+    private int bufferSize;
     
     public MappedWhiteboxRaster(String headerFile, String fileAccess) {
         this(headerFile, fileAccess, false);
@@ -54,26 +52,26 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         this.headerFile = headerFile;    
         this.dataFile = headerFile.replace(".dep", ".tas");
         this.statsFile = headerFile.replace(".dep", ".wstat");
-        readHeaderFile();
+        File f1 = new File(this.headerFile);
+        f1.delete();
+        f1 = new File(this.dataFile);
+        f1.delete();
+        f1 = new File(this.statsFile);
+        f1.delete();
+        this.initialValue = initialValue;
         setFileAccess(fileAccess);
-        
-        File file = new File(dataFile);
+        setPropertiesUsingAnotherRaster(baseRasterHeader, dataType);
+ 
         try {
-            if (!file.exists()) {
-                buffers = createNewDataFile(fileAccess);
-            } else {
-                buffers = openDataFile(fileAccess);
-            }
+            buffers = createNewDataFile(fileAccess);
         } catch (IOException e) {
             System.out.println(e);
         }        
-        setPropertiesUsingAnotherRaster(baseRasterHeader, dataType);
-        
-        this.initialValue = initialValue;
         
     }
     
     public MappedWhiteboxRaster(String headerFile, double north, double south, double east, double west, int rows, int cols, DataScale dataScale, DataType dataType, double initialValue, double noData) {
+        
         this.headerFile = headerFile;
         dataFile = headerFile.replace(".dep", ".tas");
         statsFile = headerFile.replace(".dep", ".wstat");
@@ -117,8 +115,11 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         long startPos = 0;
         long size;
         
+        // Cells shouldn't be split between two files
+        this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
+        
         while (startPos < raf.length()) {
-            size = Math.min(raf.length() - startPos, MAX_BUFFER_SIZE);
+            size = Math.min(raf.length() - startPos, this.bufferSize);
             MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
             buf.order(byteOrder);
             buf.position(0);
@@ -139,12 +140,15 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         // Get MapMode based on the provided fileAccess string
         MapMode mapMode = (fileAccess.contains("w") ? MapMode.READ_WRITE : MapMode.READ_ONLY);
         
-        long fileSize = (numberColumns * numberRows) * cellSizeInBytes;
+        long fileSize = ((long)numberColumns * numberRows) * cellSizeInBytes;
         long startPos = 0;
         long size;
         
+        // Make sure a data cells won't be split between buffers
+        this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
+        
         while (startPos < fileSize) {
-            size = Math.min(fileSize - startPos, MAX_BUFFER_SIZE);
+            size = Math.min(fileSize - startPos, this.bufferSize);
             MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
             buf.order(byteOrder);
             buf.position(0);
@@ -182,13 +186,17 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         }
 
         // Get the cell position in the file
-        int cellPos = (row * numberColumns + column) * cellSizeInBytes;
+        long cellPos = ((long)row * numberColumns + column) * cellSizeInBytes;
         
         // Get the correct buffer
-        int bufIndex = cellPos / MAX_BUFFER_SIZE;
-        MappedByteBuffer buffer = buffers.get(bufIndex);
+        int bufIndex = (int)(cellPos / this.bufferSize);
+        if (buffers == null) {
+            return noDataValue;
+        }
         
-        int bufPos = cellPos - (bufIndex * MAX_BUFFER_SIZE);
+        MappedByteBuffer buffer = buffers.get(bufIndex);
+
+        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
         
         buffer.position(bufPos);
             
@@ -207,7 +215,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             case FLOAT:
                 return buffer.getFloat();
             case INTEGER:
-                return buffer.getInt();
+                return buffer.getShort();
         }
         
         return noDataValue;
@@ -216,13 +224,17 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     @Override
     public void setValue(int row, int column, double value) {
         // Get the cell position in the file
-        int cellPos = (row * numberColumns + column) * cellSizeInBytes;
+        long cellPos = ((long)row * numberColumns + column) * cellSizeInBytes;
         
         // Get the correct buffer
-        int bufIndex = cellPos / MAX_BUFFER_SIZE;
-        MappedByteBuffer buffer = buffers.get(bufIndex);
+        int bufIndex = (int)(cellPos / this.bufferSize);
+        if (buffers == null) {
+            return;
+        }
         
-        int bufPos = cellPos - (bufIndex * MAX_BUFFER_SIZE);
+        MappedByteBuffer buffer = buffers.get(bufIndex);
+
+        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
 
         switch (getDataType()) {
             case BYTE:
@@ -235,22 +247,23 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
                 buffer.putFloat(bufPos, (float)value);
                 break;
             case INTEGER:
-                buffer.putInt(bufPos, (int)value);
+                buffer.putShort(bufPos, (short)value);
                 break;
         }
+
     }
 
     @Override
     public void setRowValues(int row, double[] vals) {
         
         // Get the first val position for the row
-        int cellPos = (row * numberColumns) * cellSizeInBytes;
+        long cellPos = ((long)row * numberColumns) * cellSizeInBytes;
         
         // Get the correct buffer
-        int bufIndex = cellPos / MAX_BUFFER_SIZE;
+        int bufIndex = (int)(cellPos / this.bufferSize);
         MappedByteBuffer buffer = buffers.get(bufIndex);
         
-        int bufPos = cellPos - (bufIndex * MAX_BUFFER_SIZE);
+        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
 
         switch (getDataType()) {
             case BYTE:
