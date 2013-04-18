@@ -170,7 +170,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     public double getValue(int row, int column) {
         
         // Re-calculate row and column if out of bounds and file is reflected
-        if (row < 0 || row > numberRows || column < 0 || column > numberColumns) {
+        if (row < 0 || row >= numberRows || column < 0 || column >= numberColumns) {
             if (!isReflectedAtEdges) { return noDataValue; }
 
             // if you get to this point, it is reflected at the edges
@@ -199,14 +199,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
         
         buffer.position(bufPos);
-            
-        try {
-            
-        } catch (IllegalArgumentException e) {
-            // The cell number is outside the bounds of this buffer
-            return noDataValue;
-        }
-        
+
         switch (getDataType()) {
             case BYTE:
                 return buffer.get();
@@ -217,6 +210,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             case INTEGER:
                 return buffer.getShort();
         }
+
         
         return noDataValue;
     }
