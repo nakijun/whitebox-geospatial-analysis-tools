@@ -65,4 +65,9 @@ public class WhiteboxRasterInfo extends WhiteboxRasterBase {
         }
     }
 
+    @Override
+    public void flush() {
+        
+    }
+
 }

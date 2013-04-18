@@ -289,5 +289,12 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
                 break;
         }
     }
+
+    @Override
+    public void flush() {
+        for (MappedByteBuffer mbb : buffers) {
+            mbb.force();
+        }
+    }
     
 }

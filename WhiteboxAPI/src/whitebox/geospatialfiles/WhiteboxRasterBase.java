@@ -35,6 +35,11 @@ public abstract class WhiteboxRasterBase {
      * Set to true when the getValue function should reflect beyond the edges.
      */
     public boolean isReflectedAtEdges = false;
+    /**
+     * Set to false if the header and data files (.dep and .tas) should be deleted
+     * when the object is closed.
+     */
+    public boolean isTemporaryFile = false;
 
     protected String headerFile;
     protected String shortHeaderName = null;
@@ -1429,4 +1434,10 @@ public abstract class WhiteboxRasterBase {
     }
     
     public abstract void close();
+    
+    /**
+     * Used to dump any data contained in memory to disk.
+     */
+    public abstract void flush();
+
 }

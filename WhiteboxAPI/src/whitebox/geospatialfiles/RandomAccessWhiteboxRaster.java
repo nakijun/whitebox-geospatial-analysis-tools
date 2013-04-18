@@ -41,12 +41,6 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
     private long blockStartingCell = 0;
     private long blockEndingCell = -1;
     private boolean isDirty = false;
-
-    /**
-     * Set to false if the header and data files (.dep and .tas) should be deleted
-     * when the object is closed.
-     */
-    public boolean isTemporaryFile = false;
     
     
     // ************************
@@ -115,6 +109,8 @@ public class RandomAccessWhiteboxRaster extends WhiteboxRasterBase implements Wh
         setFileAccess(FileAccess);
         setPropertiesUsingAnotherRaster(BaseRasterHeader, dataType);
         setBlockData();
+        
+        createNewDataFile();
 
     }
 

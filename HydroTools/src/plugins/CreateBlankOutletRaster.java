@@ -187,7 +187,6 @@ public class CreateBlankOutletRaster implements WhiteboxPlugin {
             
             WhiteboxRaster output = new WhiteboxRaster(outputHeader, "rw", 
                     inputHeader, WhiteboxRaster.DataType.FLOAT, noData);
-            output.createNewDataFile();
             output.setPreferredPalette("qual.pal");
             output.setDataScale(WhiteboxRaster.DataScale.CATEGORICAL);
             output.setDisplayMaximum(1);

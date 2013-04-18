@@ -247,7 +247,6 @@ public class NewRasterFromBase implements WhiteboxPlugin {
             WhiteboxRaster output = new WhiteboxRaster(outputHeader, "rw",
                     inputHeader, dataType, constantValue);
             output.setNoDataValue(noData);
-            output.createNewDataFile();
             
             output.setPreferredPalette(image.getPreferredPalette());
             
