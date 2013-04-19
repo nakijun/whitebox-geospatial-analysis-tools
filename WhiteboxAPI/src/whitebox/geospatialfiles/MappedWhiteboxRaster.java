@@ -3,9 +3,12 @@ package whitebox.geospatialfiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.DoubleBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -142,16 +145,26 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         
         long fileSize = ((long)numberColumns * numberRows) * cellSizeInBytes;
         long startPos = 0;
-        long size;
+        int size;
         
         // Make sure a data cells won't be split between buffers
         this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
         
+        // Represent initialValue as byte array
+        double[] initialValues = new double[this.bufferSize / 8];
+        
+        if (initialValue != 0.0) {
+            Arrays.fill(initialValues, this.initialValue);
+        }
+        
         while (startPos < fileSize) {
-            size = Math.min(fileSize - startPos, this.bufferSize);
+            size = (int) Math.min(fileSize - startPos, this.bufferSize);
             MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
             buf.order(byteOrder);
             buf.position(0);
+            buf.limit(size);
+            // sizeof(double) == 8
+            buf.asDoubleBuffer().put(initialValues, 0, size / 8);
             startPos = startPos + size;
             buffers.add(buf);
         }
