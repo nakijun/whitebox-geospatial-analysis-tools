@@ -109,25 +109,25 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     private List<MappedByteBuffer> openDataFile(String fileAccess) throws IOException {
             
         List<MappedByteBuffer> buffers = new ArrayList<>();
-
-        RandomAccessFile raf = new RandomAccessFile(this.dataFile, fileAccess);
-
-        // Get MapMode based on the provided fileAccess string
-        MapMode mapMode = (fileAccess.contains("w") ? MapMode.READ_WRITE : MapMode.READ_ONLY);
-
-        long startPos = 0;
-        long size;
         
-        // Cells shouldn't be split between two files
-        this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
-        
-        while (startPos < raf.length()) {
-            size = Math.min(raf.length() - startPos, this.bufferSize);
-            MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
-            buf.order(byteOrder);
-            buf.position(0);
-            startPos = startPos + size;
-            buffers.add(buf);
+        try (RandomAccessFile raf = new RandomAccessFile(this.dataFile, fileAccess)) {
+            
+            MapMode mapMode = (fileAccess.contains("w") ? MapMode.READ_WRITE : MapMode.READ_ONLY);
+
+            long startPos = 0;
+            long size;
+            
+            // Cells shouldn't be split between two files
+            this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
+            
+            while (startPos < raf.length()) {
+                size = Math.min(raf.length() - startPos, this.bufferSize);
+                MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
+                buf.order(byteOrder);
+                buf.position(0);
+                startPos = startPos + size;
+                buffers.add(buf);
+            }
         }
         
         return buffers;
@@ -137,36 +137,36 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     private List<MappedByteBuffer> createNewDataFile(String fileAccess) throws IOException {
         
         List<MappedByteBuffer> buffers = new ArrayList<>();
-
-        RandomAccessFile raf = new RandomAccessFile(this.dataFile, fileAccess);
-
-        // Get MapMode based on the provided fileAccess string
-        MapMode mapMode = (fileAccess.contains("w") ? MapMode.READ_WRITE : MapMode.READ_ONLY);
         
-        long fileSize = ((long)numberColumns * numberRows) * cellSizeInBytes;
-        long startPos = 0;
-        int size;
-        
-        // Make sure a data cells won't be split between buffers
-        this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
-        
-        // Represent initialValue as byte array
-        double[] initialValues = new double[this.bufferSize / 8];
-        
-        if (initialValue != 0.0) {
-            Arrays.fill(initialValues, this.initialValue);
-        }
-        
-        while (startPos < fileSize) {
-            size = (int) Math.min(fileSize - startPos, this.bufferSize);
-            MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
-            buf.order(byteOrder);
-            buf.position(0);
-            buf.limit(size);
-            // sizeof(double) == 8
-            buf.asDoubleBuffer().put(initialValues, 0, size / 8);
-            startPos = startPos + size;
-            buffers.add(buf);
+        try (RandomAccessFile raf = new RandomAccessFile(this.dataFile, fileAccess)) {
+            
+            MapMode mapMode = (fileAccess.contains("w") ? MapMode.READ_WRITE : MapMode.READ_ONLY);
+            
+            long fileSize = ((long)numberColumns * numberRows) * cellSizeInBytes;
+            long startPos = 0;
+            int size;
+            
+            // Make sure a data cells won't be split between buffers
+            this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
+            
+            // Represent initialValue as byte array
+            double[] initialValues = new double[this.bufferSize / 8];
+            
+            if (initialValue != 0.0) {
+                Arrays.fill(initialValues, this.initialValue);
+            }
+            
+            while (startPos < fileSize) {
+                size = (int) Math.min(fileSize - startPos, this.bufferSize);
+                MappedByteBuffer buf = raf.getChannel().map(mapMode, startPos, size);
+                buf.order(byteOrder);
+                buf.position(0);
+                buf.limit(size);
+                // sizeof(double) == 8
+                buf.asDoubleBuffer().put(initialValues, 0, size / 8);
+                startPos = startPos + size;
+                buffers.add(buf);
+            }
         }
         
         return buffers;
@@ -175,8 +175,20 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
 
     @Override
     public void close() {
-        //buffer.force(); // Flush any changes from memory to disk
-        //buffer = null; // There is no way to force a mapping to close
+        if (this.isTemporaryFile) {
+            File f1 = new File(this.headerFile);
+            f1.delete();
+            f1 = new File(this.dataFile);
+            f1.delete();
+        } else {
+            if (saveChanges) {
+                for (MappedByteBuffer mbb : buffers) {
+                    mbb.force();
+                }
+                findMinAndMaxVals();
+                writeHeaderFile();
+            }
+        }
     }
 
     @Override
