@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.nio.MappedByteBuffer;
+import java.nio.ShortBuffer;
 import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,7 +49,6 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             System.out.println(e);
         }
         
-        // Need to check if synchronous, if it is fileAccess should be "rwd" for direct
 
     }
     
@@ -150,11 +151,55 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
             
             // Represent initialValue as byte array
-            double[] initialValues = new double[this.bufferSize / 8];
             
-            if (initialValue != 0.0) {
-                Arrays.fill(initialValues, this.initialValue);
+            byte[] initialValueArray = new byte[this.bufferSize];
+            ByteBuffer initialValueBuffer = ByteBuffer.wrap(initialValueArray);
+            
+            switch (getDataType()) {
+                case BYTE:
+                    byte bv = (byte)this.initialValue;
+                    if (initialValueBuffer.hasArray()) {
+                        byte[] vals = initialValueBuffer.array();
+                        if (bv != 0) {
+                            // This fill will populate bb's interal array
+                            Arrays.fill(vals, 0, this.bufferSize, bv);
+                        }
+                    } else {
+                        byte[] vals = new byte[this.bufferSize];
+                        if (bv != 0) {
+                            Arrays.fill(vals, 0, this.bufferSize, bv);
+                        }
+                        initialValueBuffer.put(vals);
+                    }
+                    break;
+                case INTEGER:
+                    short iv = (short)this.initialValue;
+                    short[] intVals = new short[this.bufferSize / 2];
+                    if (iv != 0) {
+                        Arrays.fill(intVals, iv);
+                    }
+                    initialValueBuffer.asShortBuffer().put(intVals);
+                    break;
+                case DOUBLE:
+                    double[] doubleVals = new double[this.bufferSize / 8];
+            
+                    if (this.initialValue != 0.0) {
+                        Arrays.fill(doubleVals, this.initialValue);
+                    }
+                    initialValueBuffer.asDoubleBuffer().put(doubleVals);
+                    break;
+                case FLOAT:
+                    float fv = (float)this.initialValue;
+                    float[] floatVals = new float[this.bufferSize / 4];
+                    
+                    if (fv != 0.0F) {
+                        Arrays.fill(floatVals, fv);
+                    }
+                    initialValueBuffer.asFloatBuffer().put(floatVals);
+                    break;
+                    
             }
+            
             
             while (startPos < fileSize) {
                 size = (int) Math.min(fileSize - startPos, this.bufferSize);
@@ -162,8 +207,8 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
                 buf.order(byteOrder);
                 buf.position(0);
                 buf.limit(size);
-                // sizeof(double) == 8
-                buf.asDoubleBuffer().put(initialValues, 0, size / 8);
+                buf.put(initialValueArray, 0, size);
+                buf.position(0);
                 startPos = startPos + size;
                 buffers.add(buf);
             }
@@ -271,7 +316,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         }
 
     }
-
+    
     @Override
     public void setRowValues(int row, double[] vals) {
         
@@ -286,27 +331,85 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
 
         switch (getDataType()) {
             case BYTE:
-                for (double value : vals) {
-                    buffer.put(bufPos, (byte)value);
+                // Down convert to byte
+                byte[] bvals = new byte[vals.length];
+                for (int i = 0; i < vals.length; ++i) {
+                    bvals[i] = (byte)vals[i];
+                }
+                buffer.position(bufPos);
+                buffer.put(bvals);
+                break;
+            case DOUBLE:
+                buffer.position(bufPos);
+                buffer.asDoubleBuffer().put(vals);
+                break;
+            case FLOAT:
+                float[] fvals = new float[vals.length];
+                for (int i = 0; i < vals.length; ++i) {
+                    fvals[i] = (float)vals[i];
+                }
+                buffer.position(bufPos);
+                buffer.asFloatBuffer().put(fvals);
+                break;
+            case INTEGER:
+                short[] svals = new short[vals.length];
+                for (int i = 0; i < vals.length; ++i) {
+                    svals[i] = (short)vals[i];
+                }
+                buffer.position(bufPos);
+                buffer.asShortBuffer().put(svals);
+                break;
+        }
+    }
+    
+    @Override
+    public double[] getRowValues(int row) {
+        
+        // Get the first val position for the row
+        long cellPos = ((long)row * numberColumns) * cellSizeInBytes;
+        
+        // Get the correct buffer
+        int bufIndex = (int)(cellPos / this.bufferSize);
+        MappedByteBuffer buffer = buffers.get(bufIndex);
+        
+        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
+        
+        byte[] bytes = new byte[numberColumns * cellSizeInBytes];
+        
+        buffer.position(bufPos);
+        buffer.get(bytes);
+        
+        ByteBuffer bb = ByteBuffer.wrap(bytes);
+        
+        double[] vals = new double[numberColumns];
+
+        switch (getDataType()) {
+            case BYTE:
+                for (int i = 0; i < numberColumns; ++i) {
+                    vals[i] = bb.get();
                 }
                 break;
             case DOUBLE:
-                for (double value : vals) {
-                    buffer.putDouble(bufPos, value);
+                DoubleBuffer db = bb.asDoubleBuffer();
+                for (int i = 0; i < numberColumns; ++i) {
+                    vals[i] = db.get();
                 }
                 break;
             case FLOAT:
-                for (double value : vals) {
-                    buffer.putFloat(bufPos, (float)value);
+                FloatBuffer fb = bb.asFloatBuffer();
+                for (int i = 0; i < numberColumns; ++i) {
+                    vals[i] = fb.get();
                 }
-                
                 break;
             case INTEGER:
-                for (double value : vals) {
-                    buffer.putInt(bufPos, (int)value);
+                ShortBuffer sb = bb.asShortBuffer();
+                for (int i = 0; i < numberColumns; ++i) {
+                    vals[i] = sb.get();
                 }
                 break;
         }
+        
+        return vals;
     }
 
     @Override
