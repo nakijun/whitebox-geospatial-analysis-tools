@@ -26,11 +26,13 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     
     private int bufferSize;
     
+    /**
+     * Class constructor. Notice that the data file name will also be set based on the
+     * specified header file name.
+     * @param headerFile The name of the WhiteboxRaster header file.
+     * @param fileAccess Sets the file access. Either "r" (read-only) or "rw" (read/write).
+     */
     public MappedWhiteboxRaster(String headerFile, String fileAccess) {
-        this(headerFile, fileAccess, false);
-    }
-    
-    public MappedWhiteboxRaster(String headerFile, String fileAccess, boolean overwrite) {
         this.headerFile = headerFile;    
         this.dataFile = headerFile.replace(".dep", ".tas");
         this.statsFile = headerFile.replace(".dep", ".wstat");
@@ -39,7 +41,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         
         File file = new File(dataFile);
         try {
-            if (overwrite || !file.exists()) {
+            if (!file.exists()) {
                 buffers = createNewDataFile(fileAccess);
             } else {
                 buffers = openDataFile(fileAccess);
@@ -48,10 +50,28 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             // Log and ignore?
             System.out.println(e);
         }
-        
-
     }
     
+    /**
+     * Class constructor. Notice that the data file name will also be set based on the
+     * specified header file name.
+     * @param headerFile The name of the WhiteboxRaster header file.
+     * @param fileAccess Sets the file access. Either "r" (read-only) or "rw" (read/write).
+     * @param bufferSize This parameter is ignored but exists for interface compatibility
+     */
+    public MappedWhiteboxRaster(String headerFile, String fileAccess, double bufferSize) {
+        this(headerFile, fileAccess);
+    }
+    
+    /**
+     * Class constructor. Notice that the data file name will also be set based on the
+     * specified header file name.
+     * @param headerFile The name of the WhiteboxRaster header file.
+     * @param fileAccess Sets the file access. Either "r" (read-only) or "rw" (read/write).
+     * @param baseRasterHeader The name of a WhiteboxRaster header file to base this new object on.
+     * @param dataType The data type of the new WhiteboxRaster. Can be 'double', 'float', 'integer', or 'byte'
+     * @param initialValue Double indicating the value used to initialize the grid. It is recommended to use the noDataValue.
+     */
     public MappedWhiteboxRaster(String headerFile, String fileAccess, String baseRasterHeader, DataType dataType, double initialValue) {
         this.headerFile = headerFile;    
         this.dataFile = headerFile.replace(".dep", ".tas");
@@ -74,6 +94,21 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         
     }
     
+    /**
+     * Class constructor. Notice that the data file name will also be set based on the
+     * specified header file name.
+     * @param headerFile The name of the WhiteboxRaster header file.
+     * @param north The north coordinate of the raster file
+     * @param south The south value of the raster file
+     * @param east The east value of the raster file
+     * @param west The west value of the raster file
+     * @param rows The number of rows
+     * @param cols The number of columns
+     * @param dataScale The DataScale of the raster file
+     * @param dataType The data type of the new WhiteboxRaster. Can be 'double', 'float', 'integer', or 'byte'
+     * @param initialValue Double indicating the value used to initialize the grid. It is recommended to use the noDataValue.
+     * @param noData Value used to indicate there is no value for a given point
+     */
     public MappedWhiteboxRaster(String headerFile, double north, double south, double east, double west, int rows, int cols, DataScale dataScale, DataType dataType, double initialValue, double noData) {
         
         this.headerFile = headerFile;
@@ -107,6 +142,12 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         }
     }
     
+    /**
+     * Creates a List of MappedByteBuffer objects to map an existing file.
+     * @param fileAccess File access string for the file
+     * @return A list of MappedByteBuffers
+     * @throws IOException 
+     */
     private List<MappedByteBuffer> openDataFile(String fileAccess) throws IOException {
             
         List<MappedByteBuffer> buffers = new ArrayList<>();
@@ -135,6 +176,13 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
 
     }
     
+    /**
+     * Creates a List of MappedByteBuffer objects to map a new file. The file size is 
+     * determined by the number of rows and columns and the data type.
+     * @param fileAccess File access string for the new file
+     * @return A list of MappedByteBuffers
+     * @throws IOException 
+     */
     private List<MappedByteBuffer> createNewDataFile(String fileAccess) throws IOException {
         
         List<MappedByteBuffer> buffers = new ArrayList<>();
@@ -236,6 +284,12 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         }
     }
 
+    /**
+     * Retrieves the value contained at a specified cell in the raster grid.
+     * @param row The zero-based row number.
+     * @param column The zero-based column number.
+     * @return The value contained in the raster grid at the specified grid cell.
+     */
     @Override
     public double getValue(int row, int column) {
         
@@ -285,6 +339,12 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         return noDataValue;
     }
 
+    /**
+     * Sets the value of a specified cell in the raster grid.
+     * @param row The zero-based row number.
+     * @param column The zero-based column number.
+     * @param value The value to place in the grid cell.
+     */
     @Override
     public void setValue(int row, int column, double value) {
         // Get the cell position in the file
@@ -317,6 +377,14 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
 
     }
     
+     /**
+     * This method should be used when you need to set an entire row of data
+     * at a time. It has less overhead that the setValue method (which works
+     * on a pixel-by-pixel basis) and can be used to efficiently scan through 
+     * a raster image row by row.
+     * @param row An int stating the zero-based row to be returned.
+     * @param vals An array of doubles containing the values store in the specified row.
+     */
     @Override
     public void setRowValues(int row, double[] vals) {
         

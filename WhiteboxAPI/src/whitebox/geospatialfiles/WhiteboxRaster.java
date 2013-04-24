@@ -17,8 +17,7 @@ public class WhiteboxRaster extends MappedWhiteboxRaster {
     }
     
     public WhiteboxRaster(String HeaderFile, String FileAccess, double BufferSize) {
-        //super(HeaderFile, FileAccess, BufferSize);
-        super(HeaderFile, FileAccess);
+        super(HeaderFile, FileAccess, BufferSize);
     }
     
      public WhiteboxRaster(String HeaderFile, String FileAccess, String BaseRasterHeader, DataType dataType, double InitialValue) {
