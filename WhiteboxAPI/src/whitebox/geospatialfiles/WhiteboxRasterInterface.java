@@ -31,6 +31,15 @@ public interface WhiteboxRasterInterface {
      public void setRowValues(int row, double[] vals);
      
      /**
+     * This method should be used when you need to access an entire row of data
+     * at a time. It has less overhead that the getValue method and can be used
+     * to efficiently scan through a raster image row by row.
+     * @param row An int stating the zero-based row to be returned.
+     * @return An array of doubles containing the values store in the specified row.
+     */
+     public double[] getRowValues(int row);
+     
+     /**
      * Used to perform closing functionality when a WhiteboxRaster is no longer needed.
      */
      public abstract void close();
