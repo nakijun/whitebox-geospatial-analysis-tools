@@ -639,8 +639,7 @@ public class LiDAR_IDW_interpolation implements WhiteboxPlugin {
                 out.close();
 
                 // Create the whitebox raster object.
-                //WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");
-                MappedWhiteboxRaster image = new MappedWhiteboxRaster(outputHeader, "rw", true);
+                WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");
                 
                 double halfResolution = resolution / 2;
                 if (!whatToInterpolate.equals("rgb data")) {
