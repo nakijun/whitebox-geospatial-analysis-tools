@@ -142,7 +142,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     
     /**
      * Start a record for timing a particular plugin with an array of arguments.
-     * Calling reportTiming() will cause the Timing Profiler to display the results,
+     * Calling stopTiming() will cause the Timing Profiler to display the results,
      * and it can rerun the plugin with the same arguments, typically with a
      * different no. of processors.
      * 
@@ -167,6 +167,8 @@ public class TimingProfiler extends javax.swing.JFrame {
         
         // force garbage collection so it doesn't occur during timing run
         //System.gc();
+        // NOTE: this was tried, but it's just a "suggestion" and didn't give
+        // consistent results
         
         // very last thing, capture current time
         this.pluginStart = System.nanoTime();
@@ -189,14 +191,6 @@ public class TimingProfiler extends javax.swing.JFrame {
         long execTime = System.nanoTime() - pluginStart;
         float execSecs = (float) ((float)(execTime/10000000)/100.0);
         
-        // NOTE: defer this to Java 8, when WhiteboxPlugin interface can have
-        //  a default implementation of "none".  We want the method to be in
-        //  the interface, but we don't want to force all the old serial
-        //  plugins to implement it.
-        //
-        // interrogate the plugin to find out its style of parallelism
-        // plugin.getParallelism();
-        
         // store results for current no. of processors
         int nprocs = Parallel.getPluginProcessors();
         times[nprocs-1] = execTime;
@@ -205,18 +199,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         // format results in scrollable text area, and scroll to (new) bottom
         log.append(String.format("Tool name: %s%n" +
                     "Arguments: %s%n" +
-                    "Parallelism: %s%n" +
                     "No. processors: %d%n" +
                     "Execution time (sec): %.1f%n%n",
                     plugin.getName(),
                     Arrays.toString(pluginArgs),
-                    "(unknown)",
                     nprocs,  // or Parallel.getPluginProcessors()
                     execSecs));
         log.setCaretPosition(log.getDocument().getLength());
 
                 
-        // Will run next configuration is it exists.
+        // Will run next configuration if it exists.
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
