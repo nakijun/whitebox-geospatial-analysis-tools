@@ -496,11 +496,6 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
 
     @Override
     public void pluginComplete() {
-        // tell Timing Profiler to stop timing and generate its report
-        if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable() ) {
-            timingProfilerWindow.stopTiming();
-        }
-
         // remove inactive plugins from activePlugs.
         Iterator<WhiteboxPlugin> iterator = activePlugs.iterator();
         ArrayList<WhiteboxPlugin> toRemove = new ArrayList<WhiteboxPlugin>();
@@ -511,7 +506,12 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
             }
         }
         activePlugs.removeAll(toRemove);
-        
+
+        // tell Timing Profiler to stop timing, generate its report, and run the
+        // next test case if requested
+        if ( timingProfilerWindow!=null && timingProfilerWindow.isDisplayable() ) {
+            timingProfilerWindow.stopTiming();
+        }
     }
 
     @Override

@@ -194,26 +194,58 @@ public class TimingProfiler extends javax.swing.JFrame {
         // store results for current no. of processors
         int nprocs = Parallel.getPluginProcessors();
         times[nprocs-1] = execTime;
-        fields.get(nprocs-1).setText(String.format("%.1f", execSecs));
         
-        // format results in scrollable text area, and scroll to (new) bottom
-        log.append(String.format("Tool name: %s%n" +
-                    "Arguments: %s%n" +
+        // update to GUI should be done by Swing thread
+        final String s1 = String.format("%.1f", execSecs);
+        final String s2 = String.format("Tool name: %s%n" +
+                    "Arguments[%d]: %s%n" +
                     "No. processors: %d%n" +
                     "Execution time (sec): %.1f%n%n",
                     plugin.getName(),
+                    pluginArgs.length,
                     Arrays.toString(pluginArgs),
-                    nprocs,  // or Parallel.getPluginProcessors()
-                    execSecs));
-        log.setCaretPosition(log.getDocument().getLength());
+                    nprocs, 
+                    execSecs);
+        try {
+            SwingUtilities.invokeAndWait(new Runnable() {
+                String time = s1, report = s2;
+                @Override
+                public void run() {
+                    // display run time for no. processors
+                    fields.get(Parallel.getPluginProcessors()-1).setText(time);
 
-                
-        // Will run next configuration if it exists.
+                    // display report in scrollable text area, and scroll to (new) bottom
+                    log.append(report);
+                    if (!runAllList.isEmpty() && runAllPause.getValue()>0) {
+                        log.append("Pausing " + runAllPause.getValue() + " seconds... ");
+                    }
+                    log.setCaretPosition(log.getDocument().getLength());
+                }
+            });
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // If we're doing a "Run All", the next plugin invocation should be done
+        // by the Swing thread, like when "Rerun Tool" is clicked.  We can't call
+        // runPlugin() directly because stopTiming() is being called from the
+        // terminating (but still running) plugin's call to pluginComplete().
+        if (runAllList.isEmpty()) {
+            stopButton.setEnabled(false);
+            return;
+        }
+        if (runAllPause.getValue()>0) {
+            try {
+                Thread.sleep(1000 * runAllPause.getValue());    //sec -> msec
+            }
+            catch (Exception e) {}
+        }
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                runNext();
-            }
+               runNext();                
+            };
         });
     }
     
@@ -222,11 +254,22 @@ public class TimingProfiler extends javax.swing.JFrame {
      * run all thread count configurations button.
      */
     private void runNext() {
-                // If there are most configurations to run, start the next one.
+        // If there are more configurations to run, start the next one.
         if (!runAllList.isEmpty()) {
+            stopButton.setEnabled(true);
+            
+            // Are we at the start of a new pass?
+            int stillToRun = runAllList.size();
+            int maxProcs = Runtime.getRuntime().availableProcessors();
+            if ( 0 == stillToRun % maxProcs ) {
+                log.append("Passes remaining: " + stillToRun/maxProcs + "; " );
+            }
+            
+            // Configure and launch the next run
             int nextProcs = runAllList.remove(0);
             setSelectedProcessors(nextProcs);
-            Parallel.setPluginProcessors(nextProcs);
+            log.append("Starting next run..." + System.lineSeparator());
+            log.setCaretPosition(log.getDocument().getLength());
             host.runPlugin(plugin.getName(), pluginArgs);
         }
     }
@@ -278,17 +321,21 @@ public class TimingProfiler extends javax.swing.JFrame {
         procBtn16 = new javax.swing.JRadioButton();
         jTextField16 = new javax.swing.JTextField();
         jPanel2 = new javax.swing.JPanel();
+        rerunToolButton = new javax.swing.JButton();
         copyToLogButton = new javax.swing.JButton();
         clearTimesButton = new javax.swing.JButton();
+        saveLogToFileButton = new javax.swing.JButton();
+        clearLogButton = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         log = new javax.swing.JTextArea();
         jPanel3 = new javax.swing.JPanel();
-        deleteLastReportButton = new javax.swing.JButton();
-        saveLogToFileButton = new javax.swing.JButton();
-        clearLogButton = new javax.swing.JButton();
-        jPanel4 = new javax.swing.JPanel();
-        rerunToolButton = new javax.swing.JButton();
         runAllButton = new javax.swing.JButton();
+        runAllPause = new javax.swing.JSlider();
+        jLabel4 = new javax.swing.JLabel();
+        runAllPasses = new javax.swing.JSpinner();
+        jLabel3 = new javax.swing.JLabel();
+        stopButton = new javax.swing.JButton();
+        jPanel4 = new javax.swing.JPanel();
         closeButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
@@ -723,7 +770,19 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.anchor = java.awt.GridBagConstraints.NORTH;
         getContentPane().add(jPanel1, gridBagConstraints);
 
+        rerunToolButton.setText("Rerun Tool");
+        rerunToolButton.setToolTipText("Repeat last run with same arguments using selected processors.");
+        rerunToolButton.setActionCommand("");
+        rerunToolButton.setEnabled(false);
+        rerunToolButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                rerunToolButtonActionPerformed(evt);
+            }
+        });
+        jPanel2.add(rerunToolButton);
+
         copyToLogButton.setText("Copy Times to Log");
+        copyToLogButton.setToolTipText("Copy all times into log below.");
         copyToLogButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 copyToLogButtonActionPerformed(evt);
@@ -732,6 +791,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         jPanel2.add(copyToLogButton);
 
         clearTimesButton.setText("Clear Times");
+        clearTimesButton.setToolTipText("Clear all times to zero.");
         clearTimesButton.setPreferredSize(new java.awt.Dimension(121, 23));
         clearTimesButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -739,6 +799,26 @@ public class TimingProfiler extends javax.swing.JFrame {
             }
         });
         jPanel2.add(clearTimesButton);
+
+        saveLogToFileButton.setText("Save Log to File");
+        saveLogToFileButton.setToolTipText("Save log contents as a text file.");
+        saveLogToFileButton.setPreferredSize(new java.awt.Dimension(123, 23));
+        saveLogToFileButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveLogToFileButtonActionPerformed(evt);
+            }
+        });
+        jPanel2.add(saveLogToFileButton);
+
+        clearLogButton.setText("Clear Log");
+        clearLogButton.setToolTipText("Clear log contents below.");
+        clearLogButton.setPreferredSize(new java.awt.Dimension(123, 23));
+        clearLogButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                clearLogButtonActionPerformed(evt);
+            }
+        });
+        jPanel2.add(clearLogButton);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -762,52 +842,54 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.weighty = 0.9;
         getContentPane().add(jScrollPane1, gridBagConstraints);
 
-        deleteLastReportButton.setText("Delete Last Report");
-        jPanel3.add(deleteLastReportButton);
-
-        saveLogToFileButton.setText("Save Log to File");
-        saveLogToFileButton.setPreferredSize(new java.awt.Dimension(123, 23));
-        saveLogToFileButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                saveLogToFileButtonActionPerformed(evt);
-            }
-        });
-        jPanel3.add(saveLogToFileButton);
-
-        clearLogButton.setText("Clear Log");
-        clearLogButton.setPreferredSize(new java.awt.Dimension(123, 23));
-        clearLogButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                clearLogButtonActionPerformed(evt);
-            }
-        });
-        jPanel3.add(clearLogButton);
-
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 3;
-        getContentPane().add(jPanel3, gridBagConstraints);
-
-        rerunToolButton.setText("Rerun Tool");
-        rerunToolButton.setActionCommand("");
-        rerunToolButton.setEnabled(false);
-        rerunToolButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                rerunToolButtonActionPerformed(evt);
-            }
-        });
-        jPanel4.add(rerunToolButton);
-
         runAllButton.setText("Run All");
+        runAllButton.setToolTipText("Rerun tool with same arguments, using all configurations of processors, from 1 to max.");
         runAllButton.setEnabled(false);
         runAllButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 runAllButtonActionPerformed(evt);
             }
         });
-        jPanel4.add(runAllButton);
+        jPanel3.add(runAllButton);
+
+        runAllPause.setMajorTickSpacing(60);
+        runAllPause.setMaximum(300);
+        runAllPause.setMinorTickSpacing(10);
+        runAllPause.setPaintLabels(true);
+        runAllPause.setPaintTicks(true);
+        runAllPause.setSnapToTicks(true);
+        runAllPause.setToolTipText("Seconds to pause between \"Run All\" passes");
+        runAllPause.setValue(0);
+        jPanel3.add(runAllPause);
+
+        jLabel4.setText("pause (s)");
+        jPanel3.add(jLabel4);
+
+        runAllPasses.setModel(new javax.swing.SpinnerNumberModel(Integer.valueOf(1), Integer.valueOf(1), null, Integer.valueOf(1)));
+        runAllPasses.setToolTipText("No. of passes repeating \"Run All\".");
+        runAllPasses.setPreferredSize(new java.awt.Dimension(40, 18));
+        jPanel3.add(runAllPasses);
+
+        jLabel3.setText("passes");
+        jPanel3.add(jLabel3);
+
+        stopButton.setText("Stop");
+        stopButton.setToolTipText("Stop \"Run All\" after current run.");
+        stopButton.setEnabled(false);
+        stopButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stopButtonActionPerformed(evt);
+            }
+        });
+        jPanel3.add(stopButton);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 3;
+        getContentPane().add(jPanel3, gridBagConstraints);
 
         closeButton.setText("Close");
+        closeButton.setToolTipText("Stop further runs and close profiler. Current run will finish.");
         closeButton.setPreferredSize(new java.awt.Dimension(85, 23));
         closeButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -884,11 +966,14 @@ public class TimingProfiler extends javax.swing.JFrame {
         
         if (plugin != null) {
             
-             // Add all processor configurations to run queue.
+             // Add all processor configurations times no. of passes to run queue.
             int availableProcs = Runtime.getRuntime().availableProcessors();
+            int numPasses = (Integer)runAllPasses.getValue();
             runAllList.clear();
-            for (int i = 1; i <= availableProcs; i++) {
-                runAllList.add(i);
+            for (int j = 1; j <= numPasses; j++) {
+                for (int i = 1; i <= availableProcs; i++) {
+                    runAllList.add(i);
+                }
             }
             runNext();
         }
@@ -898,15 +983,20 @@ public class TimingProfiler extends javax.swing.JFrame {
         Parallel.setPluginProcessors(this.getSelectedProcessors());
     }//GEN-LAST:event_numProcessorsButtonClicked
 
+    private void stopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopButtonActionPerformed
+        runAllList.clear();
+    }//GEN-LAST:event_stopButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton clearLogButton;
     private javax.swing.JButton clearTimesButton;
     private javax.swing.JButton closeButton;
     private javax.swing.JButton copyToLogButton;
-    private javax.swing.JButton deleteLastReportButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -947,7 +1037,10 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JRadioButton procBtn9;
     private javax.swing.JButton rerunToolButton;
     private javax.swing.JButton runAllButton;
+    private javax.swing.JSpinner runAllPasses;
+    private javax.swing.JSlider runAllPause;
     private javax.swing.JButton saveLogToFileButton;
     private javax.swing.ButtonGroup selectProcsGrp;
+    private javax.swing.JButton stopButton;
     // End of variables declaration//GEN-END:variables
 }

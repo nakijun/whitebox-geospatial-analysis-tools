@@ -245,13 +245,7 @@ public class LAS2ASCII implements WhiteboxPlugin {
             showFeedback("Plugin parameters have not been set.");
             return;
         }
-        
-        int threads = Parallel.getPluginProcessors();
-        // TODO: remove after testing is done
-        System.out.println("Number of threads" + threads);
-        
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
-                
+                       
         inputFilesString = args[0];
         
         // check to see that the inputHeader and outputHeader are not null.
@@ -260,20 +254,27 @@ public class LAS2ASCII implements WhiteboxPlugin {
             return;
         }
 
-        try {
-            
+        try {       
             pointFiles = inputFilesString.split(";");
             int numPointFiles = pointFiles.length;
+            
+            // Use the no. of threads = min(no. files, specified processors)
+            int threads = Parallel.getPluginProcessors();
+            System.out.println("Threads available: " + threads);
+            if ( numPointFiles < threads ) threads = numPointFiles;
+            System.out.printf("Files to process: %d; pool size: %d threads\n", numPointFiles, threads);
+            ExecutorService pool = Executors.newFixedThreadPool(threads);            
             
             // Sort the file sizes to run the largest of them all first
             ArrayList<String> sortedNames;    
             sortedNames = sortFiles(pointFiles, numPointFiles);
                        
-            //PointRecColours pointColours;
+            // Dump the files into the pool's work queue in that order
             for (int j = 0; j < numPointFiles; j++) {
                 pool.execute(new Las2AsciiWork(sortedNames.get(j)));               
             }
         
+            // After telling pool to shutdown, poll status every second
             pool.shutdown();
             while(!pool.awaitTermination(1, TimeUnit.SECONDS)) { };
             
@@ -290,12 +291,12 @@ public class LAS2ASCII implements WhiteboxPlugin {
         }
     
         //TODO: remove after testing is done
-        System.out.println("Done");
-        // just in case
-        pool.shutdown();
+        System.out.println("Done all files!");
+        // Just in case exception occurred
+        // pool.shutdownNow();
         
         long end = System.nanoTime();
-        System.out.println( "Time Elapsed: " + (end - start)/1000000000.0 );
+        System.out.println( "Time Elapsed: " + (end - start)/1000000000.0 + " sec." );
     }
     
     
@@ -346,7 +347,7 @@ public class LAS2ASCII implements WhiteboxPlugin {
                 numPointsInFile = las.getNumPointRecords();
 
                 // TODO: remove when testing is done
-                System.out.println("Num points in file: " + numPointsInFile);
+                System.out.println("Starting file with no. points: " + numPointsInFile);
 
                 n = 0;
                 int lastA = 0;
