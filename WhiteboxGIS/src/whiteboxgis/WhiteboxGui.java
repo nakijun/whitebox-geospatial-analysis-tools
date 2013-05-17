@@ -357,9 +357,9 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
                 timingProfilerWindow.startTiming(plug, args);
             }
             
+            // Launch the plugin on a new thread.  When finished, it will call pluginComplete().
             new Thread(plug).start();
-
-            //pool.submit(plug);
+            
         } catch (Exception e) {
             System.err.println(e.getLocalizedMessage());
         }

@@ -4,6 +4,7 @@
  */
 package whiteboxgis;
 
+import java.awt.Toolkit;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -182,7 +183,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     public void stopTiming() {
         
         if (pluginStart == 0) {
-            // We never started the timing for this plugin, stop now
+            // We never started the timing for this plugin, leave now
             return;
         }
         
@@ -194,30 +195,41 @@ public class TimingProfiler extends javax.swing.JFrame {
         // store results for current no. of processors
         int nprocs = Parallel.getPluginProcessors();
         times[nprocs-1] = execTime;
-        
+               
         // update to GUI should be done by Swing thread
         final String s1 = String.format("%.1f", execSecs);
         final String s2 = String.format("Tool name: %s%n" +
                     "Arguments[%d]: %s%n" +
                     "No. processors: %d%n" +
                     "Execution time (sec): %.1f%n%n",
-                    plugin.getName(),
+                    (plugin!=null) ? plugin.getName() : "(unknown)",
                     pluginArgs.length,
                     Arrays.toString(pluginArgs),
                     nprocs, 
                     execSecs);
+        
+        // Figure out whether we need to pause before the next run,
+        // because sleeping should be done on this thread to avoid
+        // freezing the GUI.  There's only a next run if the size of the
+        // runAllList > 1.
+        final int ps = (runAllList.size() > 1) ? runAllPause.getValue() : 0;
+        
         try {
             SwingUtilities.invokeAndWait(new Runnable() {
                 String time = s1, report = s2;
+                int pauseSecs = ps;
                 @Override
                 public void run() {
                     // display run time for no. processors
                     fields.get(Parallel.getPluginProcessors()-1).setText(time);
 
-                    // display report in scrollable text area, and scroll to (new) bottom
+                    // display report in scrollable text area, "Pausing" messge
+                    // if applicable, then scroll to (new) bottom
                     log.append(report);
-                    if (!runAllList.isEmpty() && runAllPause.getValue()>0) {
-                        log.append("Pausing " + runAllPause.getValue() + " seconds... ");
+                    
+                    if ( pauseSecs > 0 ) {
+                        log.append("Pausing " + pauseSecs + " seconds..." +
+                                System.lineSeparator() );
                     }
                     log.setCaretPosition(log.getDocument().getLength());
                 }
@@ -226,21 +238,27 @@ public class TimingProfiler extends javax.swing.JFrame {
         catch (Exception e) {
             e.printStackTrace();
         }
-
-        // If we're doing a "Run All", the next plugin invocation should be done
-        // by the Swing thread, like when "Rerun Tool" is clicked.  We can't call
-        // runPlugin() directly because stopTiming() is being called from the
-        // terminating (but still running) plugin's call to pluginComplete().
-        if (runAllList.isEmpty()) {
-            stopButton.setEnabled(false);
-            return;
-        }
-        if (runAllPause.getValue()>0) {
+        
+        // Now we can execute the actual pause, before returning control to
+        // the finishing plugin.
+        if ( ps > 0 ) {
             try {
-                Thread.sleep(1000 * runAllPause.getValue());    //sec -> msec
+                Thread.sleep(1000 * ps);    //sec -> msec
             }
             catch (Exception e) {}
+        }        
+
+        // Empty list means run finished and not under scope of "Run All"
+        if (runAllList.isEmpty()) {
+            if ( beepSelect.isSelected() )     // want end-of-run beep
+                Toolkit.getDefaultToolkit().beep();
+            return;
         }
+        
+        // The next plugin invocation should be done by the Swing thread, like
+        // when "Rerun Tool" is clicked.  Unlike "Rerun Tool", we can't call
+        // runPlugin() directly because stopTiming() is being called from the
+        // terminating (but still running) plugin's call to pluginComplete().
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -250,28 +268,52 @@ public class TimingProfiler extends javax.swing.JFrame {
     }
     
     /**
-     * Runs the next configuration pending if it exists. Used to facilitate the
-     * run all thread count configurations button.
+     * Runs the next configuration {plugin, args, no. processors} from
+     * runAllList.  Arrive here by clicking "Run All" button (which populates
+     * the list), or a thread spawned from stopTiming().  At the end of all
+     * passes, the list may contain only a sentinel used for logging the
+     * times.
      */
     private void runNext() {
-        // If there are more configurations to run, start the next one.
-        if (!runAllList.isEmpty()) {
-            stopButton.setEnabled(true);
-            
-            // Are we at the start of a new pass?
-            int stillToRun = runAllList.size();
-            int maxProcs = Runtime.getRuntime().availableProcessors();
-            if ( 0 == stillToRun % maxProcs ) {
-                log.append("Passes remaining: " + stillToRun/maxProcs + "; " );
+
+        // Are we at the end of a pass? (signified by <0 entry)
+        int nextProcs = runAllList.remove(0);
+        if ( nextProcs < 0 ) {
+            copyTimesToLog();
+            if ( runAllList.size() == 0 ) { // this was the last pass
+                if ( beepSelect.isSelected() )     // wants end-of-runs beep
+                    Toolkit.getDefaultToolkit().beep();
+                stopButton.setEnabled(false);
+                return;
+                // Control goes back to user now
             }
-            
-            // Configure and launch the next run
-            int nextProcs = runAllList.remove(0);
-            setSelectedProcessors(nextProcs);
-            log.append("Starting next run..." + System.lineSeparator());
-            log.setCaretPosition(log.getDocument().getLength());
-            host.runPlugin(plugin.getName(), pluginArgs);
+            nextProcs = runAllList.remove(0);   // dequeue next entry
         }
+
+        // Are we at the start of a new pass? (signified by 1 entry)
+        if ( nextProcs == 1 ) {
+            log.append("Passes remaining: " +
+                    (1+runAllList.size())/(1+Runtime.getRuntime().availableProcessors()) +
+                    "; " );
+        }
+        
+        // Configure and launch the next run
+        setSelectedProcessors(nextProcs);
+        log.append("Starting next run..." + System.lineSeparator());
+        log.setCaretPosition(log.getDocument().getLength());
+        host.runPlugin(plugin.getName(), pluginArgs);
+    }
+    
+     /**
+     * Copies the per-processors execution times to the log as a CSV table. Called
+     * by GUI "Copy Times to Log" button, and runNext() at end of pass.
+     */
+    private void copyTimesToLog() {
+        log.append("/////" + System.lineSeparator());
+        for (int i = 1; i <= visibleFields; i++) {
+            log.append(i + "," + fields.get(i-1).getText() + System.lineSeparator());
+        }
+        log.append("\\\\\\\\\\" + System.lineSeparator() + System.lineSeparator());
     }
     
     /**
@@ -336,6 +378,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         jLabel3 = new javax.swing.JLabel();
         stopButton = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
+        beepSelect = new javax.swing.JCheckBox();
         closeButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
@@ -888,6 +931,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 3;
         getContentPane().add(jPanel3, gridBagConstraints);
 
+        beepSelect.setSelected(true);
+        beepSelect.setText("Beep");
+        beepSelect.setToolTipText("Tries to beep at end of final run.");
+        beepSelect.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                beepSelectActionPerformed(evt);
+            }
+        });
+        jPanel4.add(beepSelect);
+
         closeButton.setText("Close");
         closeButton.setToolTipText("Stop further runs and close profiler. Current run will finish.");
         closeButton.setPreferredSize(new java.awt.Dimension(85, 23));
@@ -930,10 +983,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     }//GEN-LAST:event_clearLogButtonActionPerformed
 
     private void copyToLogButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_copyToLogButtonActionPerformed
-        
-        for (int i = 1; i <= visibleFields; i++) {
-            log.append(i + " : " + fields.get(i-1).getText() + System.lineSeparator());
-        }
+        copyTimesToLog();
     }//GEN-LAST:event_copyToLogButtonActionPerformed
 
     private void saveLogToFileButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveLogToFileButtonActionPerformed
@@ -974,7 +1024,10 @@ public class TimingProfiler extends javax.swing.JFrame {
                 for (int i = 1; i <= availableProcs; i++) {
                     runAllList.add(i);
                 }
+                runAllList.add(-1);     // signals end of pass
             }
+            
+            stopButton.setEnabled(true);
             runNext();
         }
     }//GEN-LAST:event_runAllButtonActionPerformed
@@ -987,8 +1040,13 @@ public class TimingProfiler extends javax.swing.JFrame {
         runAllList.clear();
     }//GEN-LAST:event_stopButtonActionPerformed
 
+    private void beepSelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_beepSelectActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_beepSelectActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JCheckBox beepSelect;
     private javax.swing.JButton clearLogButton;
     private javax.swing.JButton clearTimesButton;
     private javax.swing.JButton closeButton;
