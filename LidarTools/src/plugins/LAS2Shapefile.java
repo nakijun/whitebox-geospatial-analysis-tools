@@ -354,7 +354,7 @@ public class LAS2Shapefile implements WhiteboxPlugin {
                 numPoints = 0;
                 n = 0;
                 //progress = 0;
-                System.out.println("Running a new file wtih " + numPointsInFile + " points");
+                System.out.println("Running a new file with " + numPointsInFile + " points");
                 int lastA = 0;
                 for (int a = 0; a < numPointsInFile; a++) {
                     point = las.getPointRecord(a);

@@ -370,13 +370,18 @@ public class WhiteboxGui extends JFrame implements ThreadListener, ActionListene
     public void returnData(Object ret) {
         // this is where all of the data returned by plugins is handled.
         if (ret instanceof String) {
+            // See whether it's OK to do a map display if timing is in effect
+            boolean okDisplay = timingProfilerWindow==null ||   // not timing
+                    !timingProfilerWindow.isDisplayable() ||    // window isn't open
+                    timingProfilerWindow.okToDisplay();         // user wants display
+            
             String retStr = ret.toString();
             if (retStr.endsWith(".dep") && retStr.contains(pathSep)) {
-                if (automaticallyDisplayReturns) {
+                if (automaticallyDisplayReturns && okDisplay) {
                     displayLayer(retStr);
                 }
             } else if (retStr.endsWith(".shp") && retStr.contains(pathSep)) {
-                if (automaticallyDisplayReturns) {
+                if (automaticallyDisplayReturns && okDisplay) {
                     displayLayer(retStr);
                 }
             } else if (retStr.endsWith(".html") && retStr.contains(pathSep)) {

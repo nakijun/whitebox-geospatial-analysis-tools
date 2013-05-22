@@ -176,6 +176,15 @@ public class TimingProfiler extends javax.swing.JFrame {
     }
     
     /**
+     * Find out whether user has allowed end-of-run map redisplay or not.
+     * 
+     * @return true if ok to redisplay; false if redisplay should be suppressed.
+     */
+    public boolean okToDisplay() {
+        return redisplaySelect.isSelected();
+    }
+    
+    /**
      * Report the run time of the plugin for which startTiming() was called.
      * 
      * @param nanosecs Wallclock execution time of plugin in nanoseconds.
@@ -199,11 +208,12 @@ public class TimingProfiler extends javax.swing.JFrame {
         // update to GUI should be done by Swing thread
         final String s1 = String.format("%.1f", execSecs);
         final String s2 = String.format("Tool name: %s%n" +
-                    "Arguments[%d]: %s%n" +
+                    "Arguments: %d, %d names %s%n" +
                     "No. processors: %d%n" +
                     "Execution time (sec): %.1f%n%n",
                     (plugin!=null) ? plugin.getName() : "(unknown)",
                     pluginArgs.length,
+                    (pluginArgs.length>0) ? pluginArgs[0].split(";").length : 0,
                     Arrays.toString(pluginArgs),
                     nprocs, 
                     execSecs);
@@ -378,6 +388,7 @@ public class TimingProfiler extends javax.swing.JFrame {
         jLabel3 = new javax.swing.JLabel();
         stopButton = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
+        redisplaySelect = new javax.swing.JCheckBox();
         beepSelect = new javax.swing.JCheckBox();
         closeButton = new javax.swing.JButton();
 
@@ -931,6 +942,16 @@ public class TimingProfiler extends javax.swing.JFrame {
         gridBagConstraints.gridy = 3;
         getContentPane().add(jPanel3, gridBagConstraints);
 
+        redisplaySelect.setSelected(true);
+        redisplaySelect.setText("Redisplay Map");
+        redisplaySelect.setToolTipText("Uncheck to suppress any end-of-run map redisplay.");
+        redisplaySelect.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                redisplaySelectActionPerformed(evt);
+            }
+        });
+        jPanel4.add(redisplaySelect);
+
         beepSelect.setSelected(true);
         beepSelect.setText("Beep");
         beepSelect.setToolTipText("Tries to beep at end of final run.");
@@ -1044,6 +1065,10 @@ public class TimingProfiler extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_beepSelectActionPerformed
 
+    private void redisplaySelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_redisplaySelectActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_redisplaySelectActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox beepSelect;
@@ -1093,6 +1118,7 @@ public class TimingProfiler extends javax.swing.JFrame {
     private javax.swing.JRadioButton procBtn7;
     private javax.swing.JRadioButton procBtn8;
     private javax.swing.JRadioButton procBtn9;
+    private javax.swing.JCheckBox redisplaySelect;
     private javax.swing.JButton rerunToolButton;
     private javax.swing.JButton runAllButton;
     private javax.swing.JSpinner runAllPasses;

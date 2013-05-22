@@ -743,6 +743,16 @@
 
       <Layout class="org.netbeans.modules.form.compat2.layouts.DesignFlowLayout"/>
       <SubComponents>
+        <Component class="javax.swing.JCheckBox" name="redisplaySelect">
+          <Properties>
+            <Property name="selected" type="boolean" value="true"/>
+            <Property name="text" type="java.lang.String" value="Redisplay Map"/>
+            <Property name="toolTipText" type="java.lang.String" value="Uncheck to suppress any end-of-run map redisplay."/>
+          </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="redisplaySelectActionPerformed"/>
+          </Events>
+        </Component>
         <Component class="javax.swing.JCheckBox" name="beepSelect">
           <Properties>
             <Property name="selected" type="boolean" value="true"/>
