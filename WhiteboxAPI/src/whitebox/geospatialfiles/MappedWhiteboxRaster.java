@@ -432,6 +432,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
     
     @Override
     public double[] getRowValues(int row) {
+        if (row < 0 || row >= numberRows) { return null; }
         
         // Get the first val position for the row
         long cellPos = ((long)row * numberColumns) * cellSizeInBytes;
@@ -440,37 +441,33 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         int bufIndex = (int)(cellPos / this.bufferSize);
         MappedByteBuffer buffer = buffers.get(bufIndex);
         
-        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
-        
-        byte[] bytes = new byte[numberColumns * cellSizeInBytes];
-        
-        buffer.position(bufPos);
-        buffer.get(bytes);
-        
-        ByteBuffer bb = ByteBuffer.wrap(bytes);
-        
+        // Position it at the start of this row
+        buffer.position( (int)(cellPos % this.bufferSize) );
+
         double[] vals = new double[numberColumns];
 
         switch (getDataType()) {
             case BYTE:
+                // convert bytes in image to double vals
                 for (int i = 0; i < numberColumns; ++i) {
-                    vals[i] = bb.get();
+                    vals[i] = buffer.get();
                 }
                 break;
             case DOUBLE:
-                DoubleBuffer db = bb.asDoubleBuffer();
-                for (int i = 0; i < numberColumns; ++i) {
-                    vals[i] = db.get();
-                }
+                // double to double, no conversion needed
+                DoubleBuffer db = buffer.asDoubleBuffer();
+                db.get( vals );
                 break;
             case FLOAT:
-                FloatBuffer fb = bb.asFloatBuffer();
+                // convert floats in image to double vals
+                FloatBuffer fb = buffer.asFloatBuffer();
                 for (int i = 0; i < numberColumns; ++i) {
                     vals[i] = fb.get();
                 }
                 break;
             case INTEGER:
-                ShortBuffer sb = bb.asShortBuffer();
+                // convert ints in image to double vals
+                ShortBuffer sb = buffer.asShortBuffer();
                 for (int i = 0; i < numberColumns; ++i) {
                     vals[i] = sb.get();
                 }
