@@ -16,13 +16,45 @@ import java.util.List;
 /**
  * Implementation of WhiteboxRasterInterface that uses a memory mapped file for
  * accessing the disk.
+ * 
+ * NOTE: Some public methods from the original WhiteboxRaster class have not (yet)
+ * been implemented because no plugins are currently calling them and/or their
+ * functionality does not exist in this class:
+ *  decrementValue()
+ *  incrementValue()
+ *  getBLockSize()
+ *  getBufferSize()
+ *  getNumberOfDataFileReads()
+ *  getNumberOfDataFileWrites()
+ * 
  * @author Kevin Green <kevin.a.green@gmail.com>
  */
 public class MappedWhiteboxRaster extends WhiteboxRasterBase implements WhiteboxRasterInterface {   
     
     private List<MappedByteBuffer> buffers;
     
-    private static final int MAX_BUFFER_SIZE = 16777216; // 16MB = 2^24
+    /* How big to make each MappedByteBuffer, i.e., file segment? A segment gets
+     * its own range of virtual addresses, and physically adjacent disk segments
+     * will not necessarily be mapped adjacently in virtual memory.
+     * 
+     * Absolute max is max positive integer (Integer.MAX_VALUE = 2^31-1 ~ 2GB) since
+     * methods such as Buffer.position(p) take an int.
+     * 
+     * Below that, the straightforward tradeoff is between many small segments vs.
+     * few large segments.  The total number of virtual memory pages is the same
+     * either way, and most plugins are eventually going to read or write the entire
+     * file.  The constant below reflects a recommended segment size, and experiments
+     * could be done about changing it.
+     * 
+     * MAX_BUFFER_SIZE needs to be rounded down to meet two constraints:
+     * 1) Individual image cells must not break across segments (get/setValue())
+     * 2) Entire rows must not break across segments in order to simplify
+     *    get/setRowValues(), implying that MAX_BUFFER_SIZE > largest expected
+     *    row size.
+     * 1) is satisfied by 2). 
+     */
+    // 16MB = 2^24, allows for over 2 million columns of 8-byte (double) pixels
+    private static final int MAX_BUFFER_SIZE = 16777216;
     
     private int bufferSize;
     
@@ -159,8 +191,8 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             long startPos = 0;
             long size;
             
-            // Cells shouldn't be split between two files
-            this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
+            // Rows shouldn't be split between two buffers
+            this.bufferSize = MAX_BUFFER_SIZE - ( MAX_BUFFER_SIZE % (cellSizeInBytes*numberColumns) );
             
             while (startPos < raf.length()) {
                 size = Math.min(raf.length() - startPos, this.bufferSize);
@@ -195,8 +227,8 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             long startPos = 0;
             int size;
             
-            // Make sure a data cells won't be split between buffers
-            this.bufferSize = MAX_BUFFER_SIZE - (MAX_BUFFER_SIZE % cellSizeInBytes);
+            // Rows shouldn't be split between two buffers
+            this.bufferSize = MAX_BUFFER_SIZE - ( MAX_BUFFER_SIZE % (cellSizeInBytes*numberColumns) );
             
             // Represent initialValue as byte array
             
@@ -275,9 +307,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             f1.delete();
         } else {
             if (saveChanges) {
-                for (MappedByteBuffer mbb : buffers) {
-                    mbb.force();
-                }
+                flush();
                 findMinAndMaxVals();
                 writeHeaderFile();
             }
@@ -309,21 +339,12 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
             }
         }
 
-        // Get the cell position in the file
-        long cellPos = ((long)row * numberColumns + column) * cellSizeInBytes;
-        
-        // Get the correct buffer
-        int bufIndex = (int)(cellPos / this.bufferSize);
-        if (buffers == null) {
+        // Position file to start of cell in buffer
+        MappedByteBuffer buffer = seekCell( row, column );
+        if (buffer == null) {
             return noDataValue;
         }
         
-        MappedByteBuffer buffer = buffers.get(bufIndex);
-
-        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
-        
-        buffer.position(bufPos);
-
         switch (getDataType()) {
             case BYTE:
                 return buffer.get();
@@ -347,31 +368,24 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
      */
     @Override
     public void setValue(int row, int column, double value) {
-        // Get the cell position in the file
-        long cellPos = ((long)row * numberColumns + column) * cellSizeInBytes;
-        
-        // Get the correct buffer
-        int bufIndex = (int)(cellPos / this.bufferSize);
-        if (buffers == null) {
+        // Position file to start of cell in buffer
+        MappedByteBuffer buffer = seekCell( row, column );
+        if (buffer == null) {
             return;
         }
-        
-        MappedByteBuffer buffer = buffers.get(bufIndex);
-
-        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
 
         switch (getDataType()) {
             case BYTE:
-                buffer.put(bufPos, (byte)value);
+                buffer.put( (byte)value );
                 break;
             case DOUBLE:
-                buffer.putDouble(bufPos, value);
+                buffer.putDouble( value );
                 break;
             case FLOAT:
-                buffer.putFloat(bufPos, (float)value);
+                buffer.putFloat( (float)value );
                 break;
             case INTEGER:
-                buffer.putShort(bufPos, (short)value);
+                buffer.putShort( (short)value );
                 break;
         }
 
@@ -387,66 +401,75 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
      */
     @Override
     public void setRowValues(int row, double[] vals) {
+        if (!saveChanges) { return; }
+        if (vals.length != numberColumns) { return; } 
         
-        // Get the first val position for the row
-        long cellPos = ((long)row * numberColumns) * cellSizeInBytes;
+        // update the minimum and maximum values
+        double min = Double.MAX_VALUE;
+        double max = Double.MIN_VALUE;
+        for (int i = 0; i < numberColumns; i++) {
+            if (vals[i] < min && vals[i] != noDataValue) { min = vals[i]; }
+            if (vals[i] > max && vals[i] != noDataValue) { max = vals[i]; }
+        }
+        if (max > maximumValue) { maximumValue = max; }
+        if (min < minimumValue) { minimumValue = min; }
         
-        // Get the correct buffer
-        int bufIndex = (int)(cellPos / this.bufferSize);
-        MappedByteBuffer buffer = buffers.get(bufIndex);
-        
-        int bufPos = (int)(cellPos - ((long)bufIndex * this.bufferSize));
+        // Position file to start of cell in buffer
+        MappedByteBuffer buffer = seekCell( row, 0 );
 
         switch (getDataType()) {
             case BYTE:
-                // Down convert to byte
-                byte[] bvals = new byte[vals.length];
+                // Down convert double vals to bytes in image
                 for (int i = 0; i < vals.length; ++i) {
-                    bvals[i] = (byte)vals[i];
+                    buffer.put( (byte)vals[i] );
                 }
-                buffer.position(bufPos);
-                buffer.put(bvals);
                 break;
             case DOUBLE:
-                buffer.position(bufPos);
-                buffer.asDoubleBuffer().put(vals);
+                // Double to double, no conversion needed
+                buffer.asDoubleBuffer().put( vals );
                 break;
             case FLOAT:
-                float[] fvals = new float[vals.length];
+                // Convert double vals to floats in image
+                FloatBuffer fb = buffer.asFloatBuffer();
                 for (int i = 0; i < vals.length; ++i) {
-                    fvals[i] = (float)vals[i];
+                    fb.put( (float)vals[i] );
                 }
-                buffer.position(bufPos);
-                buffer.asFloatBuffer().put(fvals);
                 break;
             case INTEGER:
-                short[] svals = new short[vals.length];
+                // Convert double vals to ints in image
+                ShortBuffer sb = buffer.asShortBuffer();
                 for (int i = 0; i < vals.length; ++i) {
-                    svals[i] = (short)vals[i];
+                    sb.put( (short)vals[i] );
                 }
-                buffer.position(bufPos);
-                buffer.asShortBuffer().put(svals);
                 break;
         }
     }
     
+     /**
+     * This method should be used when you need to access an entire row of data
+     * at a time. It has less overhead that the getValue method and can be used
+     * to efficiently scan through a raster image row by row.
+     * @param row An int stating the zero-based row to be returned.
+     * @return An array of doubles containing the values store in the specified row.
+     */
     @Override
     public double[] getRowValues(int row) {
         if (row < 0 || row >= numberRows) { return null; }
         
-        // Get the first val position for the row
-        long cellPos = ((long)row * numberColumns) * cellSizeInBytes;
-        
-        // Get the correct buffer
-        int bufIndex = (int)(cellPos / this.bufferSize);
-        MappedByteBuffer buffer = buffers.get(bufIndex);
-        
-        // Position it at the start of this row
-        buffer.position( (int)(cellPos % this.bufferSize) );
-
         double[] vals = new double[numberColumns];
 
-        switch (getDataType()) {
+        // Position file to start of cell in buffer
+        MappedByteBuffer buffer = seekCell( row, 0 );
+        
+        /* There's a case where the .dep file has been created, but not the
+         * corresponding .tas file, and yet the .dep file needs to know the min/max
+         * values in the (non-existant) .tas file, so it's trying to get all the
+         * rows in order to find min/max. This will come back from seekCell() as
+         * null buffer (due to no .tas file yet). The original behaviour of this
+         * method returns the vals array (zeroed by default), so we achieve that
+         * by simply skipping the "get".
+         */
+        if ( buffer != null ) switch (getDataType()) {
             case BYTE:
                 // convert bytes in image to double vals
                 for (int i = 0; i < numberColumns; ++i) {
@@ -455,8 +478,7 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
                 break;
             case DOUBLE:
                 // double to double, no conversion needed
-                DoubleBuffer db = buffer.asDoubleBuffer();
-                db.get( vals );
+                buffer.asDoubleBuffer().get( vals );
                 break;
             case FLOAT:
                 // convert floats in image to double vals
@@ -477,6 +499,10 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         return vals;
     }
 
+    /**
+     * Synchronizes state of underlying disk file to current memory contents of
+     * file's MappedByteBuffer(s), i.e., writes out any changes.
+     */
     @Override
     public void flush() {
         for (MappedByteBuffer mbb : buffers) {
@@ -484,4 +510,27 @@ public class MappedWhiteboxRaster extends WhiteboxRasterBase implements Whitebox
         }
     }
     
+    /**
+     * Find the MappedByteBuffer containing a given (row,col) cell, and position
+     * to the start of that cell for subsequent get/put operations.
+     * @param row The zero-based row number.
+     * @param col The zero-based column number.
+     * @return The MappedByteBuffer containing the given (row,col) cell, or null
+     * if the file has no buffers.
+     */
+    private MappedByteBuffer seekCell( int row, int col ) {
+        if ( buffers == null ) { return null; }
+        
+        // Calculate the cell position from start of image
+        long cellPos = ((long)row * numberColumns + col) * cellSizeInBytes;
+        
+        // Get the correct buffer
+        MappedByteBuffer buffer = buffers.get( (int)(cellPos / bufferSize) );
+        
+        // Position buffer at the start of the cell
+        buffer.position( (int)(cellPos % bufferSize) );
+        
+        return buffer;        
+    }
+
 }
