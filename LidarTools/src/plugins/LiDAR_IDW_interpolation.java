@@ -29,12 +29,11 @@ import java.util.concurrent.TimeUnit;
 import whitebox.geospatialfiles.LASReader;
 import whitebox.geospatialfiles.LASReader.PointRecColours;
 import whitebox.geospatialfiles.LASReader.PointRecord;
-import whitebox.geospatialfiles.MappedWhiteboxRaster;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.interfaces.WhiteboxPlugin;
 import whitebox.interfaces.WhiteboxPluginHost;
-import whitebox.structures.KdTree;
 import whitebox.parallel.Parallel;
+import whitebox.structures.KdTree;
 
 /**
  * WhiteboxPlugin is used to define a plugin tool for Whitebox GIS.
