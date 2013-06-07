@@ -5,9 +5,12 @@
 package whitebox.geospatialfiles;
 
 /**
- * WhiteboxRaster is a wrapper class for SequentialWhiteboxRaster. This should
- * be a temporary workaround while MappedWhiteboxRaster is implemented and becomes
- * the standard for all raster image use.
+ * WhiteboxRaster is a wrapper class for whichever implementation is being used.
+ * The newly-developed MappedWhiteboxRaster is selected below, but this could
+ * be changed to RandomAccessWhiteboxRaster to get the old implementation.
+ * There is no need to change any plugin code, because they are all doing
+ * "new WhiteboxRaster"; they get whichever implementation is selected here.
+ * 
  * @author Kevin Green <kevin.a.green@gmail.com>
  */
 public class WhiteboxRaster extends MappedWhiteboxRaster {
