@@ -1,9 +1,0 @@
-<Dialog Name="LAS2Shapefile" HelpFile="LAS2Shapefile.html">
-	<DialogComponent type="DialogMultiFile">
-		<Name>inputFiles</Name>
-		<Description>Enter the name of the input LAS files here</Description>
-		<LabelText>Input LAS Files:</LabelText>
-		<Filter>LAS Files (*.las), LAS</Filter>
-		<IsVisible>True</IsVisible>
-	</DialogComponent>
-</Dialog>
