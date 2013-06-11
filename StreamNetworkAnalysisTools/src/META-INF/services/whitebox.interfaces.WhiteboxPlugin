@@ -1,0 +1,13 @@
+plugins.ExtractStreams
+plugins.ExtractValleysJohnstonAndRosenfeld
+plugins.ExtractValleysLowerQuartile
+plugins.ExtractValleysPeuckerAndDouglas
+plugins.FindMainStem
+plugins.RasterStreamsToVector
+plugins.RemoveShortStreams
+plugins.StreamLinkClassification
+plugins.StreamLinkID
+plugins.StreamLinkLength
+plugins.StreamLinkSlope
+plugins.StreamMagnitude
+plugins.StreamOrder
