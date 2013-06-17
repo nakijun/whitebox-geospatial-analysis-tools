@@ -44,7 +44,7 @@ public class ImportPolSAR implements WhiteboxPlugin {
      */
     @Override
     public String getToolDescription() {
-        return "Imports a UAVPolSAR data and covert the to dep files.";
+        return "Imports a UAVPolSAR data and covert them to dep files.";
     }
     /**
      * Used to identify which toolboxes this plugin tool should be listed in.
