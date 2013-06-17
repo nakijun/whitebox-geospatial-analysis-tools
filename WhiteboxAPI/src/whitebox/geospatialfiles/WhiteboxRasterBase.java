@@ -1094,6 +1094,14 @@ public abstract class WhiteboxRasterBase {
         minimumValue = min;
     }
     
+    //Add by Ehsan to by pass the close method in WhiteboxRaster.java
+    public void findMinAndMaxVals(double minimum, double maximum) {
+        
+        maximumValue = maximum;
+        minimumValue = minimum;
+    }
+
+    
     protected double[] cumulativeHisto = null;
     public double getPercentileValue(double percentile) {
         if (mean == noDataValue || mean == -32768d) {
