@@ -12,3 +12,4 @@ plugins.ImportImage
 plugins.ImportSurferAsciiGrid
 plugins.ImportTASVector
 plugins.ImportXYZToVectorPoints
+plugins.ImportPolSAR
