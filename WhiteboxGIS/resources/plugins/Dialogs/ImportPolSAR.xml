@@ -1,0 +1,95 @@
+<Dialog Name="ImportPolSAR" HelpFile="ImportXYZToVectorPoints.html">
+	<DialogComponent type="DialogFile">
+		<Name>InputFile</Name>
+		<Description>Enter the name of the header file here</Description>
+		<LabelText>Input Header File Name:</LabelText>
+		<DialogMode>Open File</DialogMode>
+		<Filter>Annotation Files (*.ann; *.txt), ANN, TXT</Filter>
+		<IsVisible>True</IsVisible>
+		<MakeOptional>False</MakeOptional>
+		<ShowButton>True</ShowButton>
+	</DialogComponent>
+
+        <DialogComponent type="DialogComboBox">
+		<Name>whatToImport</Name>
+		<Description>Choose the UAVPolSAR Data Type to Import</Description>
+		<LabelText>Data Type:</LabelText>
+		<IsVisible>True</IsVisible>
+		<ListItems>Calibrated Ground projected files (.grd),SLC files (.slc): calibrated single look complex files,MLC files (.mlc): calibrated multi-looked cross products</ListItems>
+		<DefaultItem>0</DefaultItem>		
+	</DialogComponent>
+
+
+        <DialogComponent type="DialogCheckBox">
+		<Name>HHHH</Name>
+		<Description>Check to build the dep file for HHHH polarization</Description>
+		<LabelText>HHHH Polarization</LabelText>
+		<InitialState>True</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+
+        <DialogComponent type="DialogCheckBox">
+		<Name>HVHV</Name>
+		<Description>Check to build the dep file for HVHV polarization</Description>
+		<LabelText>HVHV Polarization</LabelText>
+		<InitialState>True</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+
+        <DialogComponent type="DialogCheckBox">
+		<Name>VVVV</Name>
+		<Description>Check to build the dep file for VVVV polarization</Description>
+		<LabelText>VVVV Polarization</LabelText>
+		<InitialState>True</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+
+        <DialogComponent type="DialogCheckBox">
+		<Name>HHHVReal</Name>
+		<Description>Check to build the dep file from HHHV Real Part polarization</Description>
+		<LabelText>HHHV Polarization (Real Part)</LabelText>
+		<InitialState>False</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+        <DialogComponent type="DialogCheckBox">
+		<Name>HHHVImaginary</Name>
+		<Description>Check to build the dep file from HHHV Imaginary Part polarization</Description>
+		<LabelText>HHHV Polarization (Imaginary Part)</LabelText>
+		<InitialState>False</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+
+
+
+        <DialogComponent type="DialogCheckBox">
+		<Name>HHVVReal</Name>
+		<Description>Check to build the dep file from HHVV Real polarization</Description>
+		<LabelText>HHVV Polarization (Real Part)</LabelText>
+		<InitialState>False</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+        <DialogComponent type="DialogCheckBox">
+		<Name>HHVVReal</Name>
+		<Description>Check to build the dep file from HHVV Imaginary polarization</Description>
+		<LabelText>HHVV Polarization (Imaginary Part)</LabelText>
+		<InitialState>False</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+
+
+        <DialogComponent type="DialogCheckBox">
+		<Name>HVVVReal</Name>
+		<Description>Check to build the dep file from HVVV Real Part polarization</Description>
+		<LabelText>HVVV Polarization (Real Part)</LabelText>
+		<InitialState>False</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+        <DialogComponent type="DialogCheckBox">
+		<Name>HVVVImaginary</Name>
+		<Description>Check to build the dep file from HVVV Imaginary Part polarization</Description>
+		<LabelText>HVVV Polarization (Imaginary Part)</LabelText>
+		<InitialState>False</InitialState>
+		<IsVisible>True</IsVisible>
+	</DialogComponent>
+
+</Dialog>
