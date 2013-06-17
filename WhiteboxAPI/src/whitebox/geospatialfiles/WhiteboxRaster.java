@@ -1024,5 +1024,22 @@ public class WhiteboxRaster extends WhiteboxRasterBase {
         }
         grid = null;
     }
+    //add by Ehsan to bypas the findMinAndMaxVals function 23-04-2013
+    public void close(double minValue, double maxValue) {
+        if (this.isTemporaryFile) {
+            File f1 = new File(this.headerFile);
+            f1.delete();
+            f1 = new File(this.dataFile);
+            f1.delete();
+        } else {
+            if (saveChanges) {
+                if (isDirty) { writeDataBlock(); }
+                findMinAndMaxVals(minValue,maxValue);
+                writeHeaderFile();
+            }
+        }
+        grid = null;
+    }
+
 
 }
