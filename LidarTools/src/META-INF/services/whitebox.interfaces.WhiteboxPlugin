@@ -6,3 +6,4 @@ plugins.LiDAR_Min_interpolation
 plugins.LiDAR_NN_interpolation
 plugins.LiDAR_PointDensity
 plugins.RemoveOffTerrainObjects
+plugins.Tree_Density
