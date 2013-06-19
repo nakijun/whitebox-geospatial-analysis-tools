@@ -124,7 +124,7 @@ public class TreeFinder {
         for (int r = 0; r < rows; r++) {
             value[r]=image.getRowValues(r);
         }
-        Search();
+        //Search();
     }
     
     //Object Constructor with coef. for the imperical equation and other input values
@@ -147,7 +147,7 @@ public class TreeFinder {
         for (int r = 0; r < rows; r++) {
             value[r]=image.getRowValues(r);
         }
-        Search();
+        //Search();
     }
     
     //The main method that searches all of the cells and builds the shape file which consists of
