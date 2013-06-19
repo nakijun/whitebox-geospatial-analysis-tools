@@ -132,7 +132,7 @@ public class TreeFinder {
             , double threshold, double maxHeight){
         this.inputRaster = inputRaster;
         this.outputShapefile = outputShapefile;
-        this.a =a;
+        this.a = a;
         this.b = b;
         this.c = c;
         this.threshold = threshold;

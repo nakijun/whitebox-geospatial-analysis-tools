@@ -240,6 +240,10 @@ public class Tree_Density implements WhiteboxPlugin {
         }
         inputFilesString = args[0];
         suffix = " " + args[1].trim();
+        
+        TreeFinder tf = new TreeFinder(args[0],args[0].replace(".dep", args[1] + ".shp"));
+        
+        
         returnNumberToInterpolate = args[2].toLowerCase();
         resolution = Double.parseDouble(args[3]);
         excludeNeverClassified = Boolean.parseBoolean(args[4]);
@@ -555,18 +559,19 @@ public class Tree_Density implements WhiteboxPlugin {
     }
       
 //    // this is only used for debugging the tool
-//    public static void main(String[] args) {
-//        LiDAR_PointDensity nn = new LiDAR_PointDensity();
-//        args = new String[17];
-//        args[0] = "/Users/johnlindsay/Documents/Data/u_5565073175.las";
-//        //args[0] = "/Users/johnlindsay/Documents/Data/u_5565073250.las";
-//        args[1] = " last return intensity";
+    public static void main(String[] args) {
+        //LiDAR_PointDensity nn = new LiDAR_PointDensity();
+        Tree_Density nn = new Tree_Density();
+        args = new String[2];
+        args[0] = "C:\\PDF\\John Example\\Data\\Data\\out.dep";
+        //args[0] = "/Users/johnlindsay/Documents/Data/u_5565073250.las";
+        args[1] = "OUT";
 //        args[2] = "intensity";
 //        args[3] = "last return";
 //        args[4] = "4";
 //        args[5] = "1";
-//        nn.setArgs(args);
-//        nn.run();
-//        
-//    }
+        nn.setArgs(args);
+        nn.run();
+        
+    }
 }
