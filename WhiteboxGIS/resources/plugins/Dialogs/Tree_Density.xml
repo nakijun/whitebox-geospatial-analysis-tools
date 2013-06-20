@@ -71,5 +71,15 @@
 		<MakeOptional>False</MakeOptional>
 	</DialogComponent>
 
+        <DialogComponent type="DialogDataInput">
+		<Name>Cellsize</Name>
+		<Description>Enter Output Raster Cell Size</Description>
+		<LabelText>Cell Size</LabelText>
+		<IsVisible>True</IsVisible>
+		<InitialText>1</InitialText>
+		<NumericalInputOnly>Ture</NumericalInputOnly>
+		<MakeOptional>False</MakeOptional>
+	</DialogComponent>
+
 
 </Dialog>
