@@ -4,17 +4,25 @@
  */
 package plugins;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import whitebox.geospatialfiles.LASReader;
 import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.WhiteboxRaster;
+import whitebox.geospatialfiles.shapefile.ShapeFileRecord;
 import whitebox.geospatialfiles.shapefile.ShapeType;
+import whitebox.geospatialfiles.shapefile.attributes.AttributeTable;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.geospatialfiles.shapefile.attributes.DBFWriter;
 import whitebox.structures.BoundingBox;
+import whitebox.structures.KdTree;
 
 /**
  *
@@ -30,13 +38,15 @@ public class TreeFinder {
     private double threshold = 0;
     private double maxHeight = 50;
     private double densitySearchRadius = 100;
-    private double outpurCellSize = 1;
+    private double outputCellSize = 1;
     private WhiteboxRaster image;
     private int cols;
     private int rows;
     private double colSize;
     private double rowSize;
     double[][] value;
+    private double numberOfTrees;
+    private double[][] trees;
     
     //bonding cells for the local search area
     private class BBox{
@@ -54,7 +64,6 @@ public class TreeFinder {
         public double Diameter;
         public double Height;
     }
-    
     public String getInputRaster(){
         return inputRaster;
     }
@@ -81,10 +90,13 @@ public class TreeFinder {
         return maxHeight;
     }
     public double getOutputCellSize (){
-        return outpurCellSize;
+        return outputCellSize;
     }
     public double getDensitySearchRadius (){
         return densitySearchRadius;
+    }
+    public double getNumberOfTrees(){
+        return numberOfTrees;
     }
     
     public void setA(double a){
@@ -106,7 +118,7 @@ public class TreeFinder {
         this.densitySearchRadius = SearchRadius;
     }
     public void setOutputCellSize(double OutputCellSize){
-        this.outpurCellSize = OutputCellSize;
+        this.outputCellSize = OutputCellSize;
     }
     
     //Constractor for the object
@@ -199,14 +211,313 @@ public class TreeFinder {
                     }
                 }
             }
-                output.write();
-                writer.write();
+            output.write();
+            writer.write();
+            this.numberOfTrees = numPoints;
 
         } catch (DBFException ex) {
             Logger.getLogger(TreeFinder.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(TreeFinder.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    public void Density()
+    {
+        try {
+            ShapeType shapeType;
+            ShapeFile input = new ShapeFile(this.outputShapefile);
+            shapeType = input.getShapeType();
+            KdTree<Double> pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer((int)numberOfTrees));
+            double minX, maxX, minY, maxY;
+            
+            if (shapeType.getBaseType() == ShapeType.POINT
+                    && shapeType.getBaseType() != ShapeType.MULTIPOINT) {
+                AttributeTable reader = input.getAttributeTable();
+                int numFields = reader.getFieldCount();
+
+                DBFField[] fields = reader.getAllFields();
+                double[] entry;
+                double x,y,z;
+                minX = Double.POSITIVE_INFINITY;
+                maxX = Double.NEGATIVE_INFINITY;
+                minY = Double.POSITIVE_INFINITY;
+                maxY = Double.NEGATIVE_INFINITY;
+                
+                for (ShapeFileRecord record : input.records) 
+                {
+                    if (record.getShapeType() != ShapeType.NULLSHAPE) 
+                    {
+                        double[][] point =  record.getGeometry().getPoints();
+                        x = point[0][0];
+                        y = point[0][1];
+                        z = 0;
+                        entry = new double[]{x,y};
+                        pointsTree.addPoint(entry, z);
+                        if (x < minX) {
+                            minX = x;
+                        }
+                        if (x > maxX) {
+                            maxX = x;
+                        }
+                        if (y < minY) {
+                            minY = y;
+                        }
+                        if (y > maxY) {
+                            maxY = y;
+                        }
+                    }
+                }
+                
+                
+                
+                int i = 0;
+                
+            }
+            
+            
+//            maxDist = (resolution * 2) * (resolution * 2); // actually squared
+//            
+//            double[] entry;
+//            for (int j = 0; j < numPointFiles; j++) {
+//                
+//                // now read the valid points into the k-dimensional tree.
+//                minX = Double.POSITIVE_INFINITY;
+//                maxX = Double.NEGATIVE_INFINITY;
+//                minY = Double.POSITIVE_INFINITY;
+//                maxY = Double.NEGATIVE_INFINITY;
+//        
+//                KdTree<Double> pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer(numPoints));
+//            
+//                
+//                // read the points in
+//                if (returnNumberToInterpolate.equals("all points")) {
+//                    for (a = 0; a < numPointsInFile; a++) {
+//                        point = las.getPointRecord(a);
+//                        if (!point.isPointWithheld()
+//                                && !(classValuesToExclude[point.getClassification()])) {
+//                            x = point.getX();
+//                            y = point.getY();
+//                            z = point.getZ();
+//                            
+//                            entry = new double[]{y, x};
+//                            pointsTree.addPoint(entry, z);
+//
+//                            if (x < minX) {
+//                                minX = x;
+//                            }
+//                            if (x > maxX) {
+//                                maxX = x;
+//                            }
+//                            if (y < minY) {
+//                                minY = y;
+//                            }
+//                            if (y > maxY) {
+//                                maxY = y;
+//                            }
+//                        }
+//                        progress = (int) (100d * (a + 1) / numPointsInFile);
+//                        if ((progress % 2) == 0) {
+//                            updateProgress("Reading point data:", progress);
+//                        }
+//                    }
+//                } else if (returnNumberToInterpolate.equals("first return")) {
+//                    for (a = 0; a < numPointsInFile; a++) {
+//                        point = las.getPointRecord(a);
+//                        if (!point.isPointWithheld()
+//                                && !(classValuesToExclude[point.getClassification()]) &&
+//                                point.getReturnNumber() == 1) {
+//                            x = point.getX();
+//                            y = point.getY();
+//                            z = point.getZ();
+//                            
+//                            entry = new double[]{y, x};
+//                            pointsTree.addPoint(entry, z);
+//
+//                            if (x < minX) {
+//                                minX = x;
+//                            }
+//                            if (x > maxX) {
+//                                maxX = x;
+//                            }
+//                            if (y < minY) {
+//                                minY = y;
+//                            }
+//                            if (y > maxY) {
+//                                maxY = y;
+//                            }
+//                        }
+//                        progress = (int) (100d * (a + 1) / numPointsInFile);
+//                        if ((progress % 2) == 0) {
+//                            updateProgress("Reading point data:", progress);
+//                        }
+//                    }
+//                } else { // if (returnNumberToInterpolate.equals("last return")) {
+//                    for (a = 0; a < numPointsInFile; a++) {
+//                        point = las.getPointRecord(a);
+//                        if (!point.isPointWithheld()
+//                                && !(classValuesToExclude[point.getClassification()]) &&
+//                                point.getReturnNumber() == point.getNumberOfReturns()) {
+//                            x = point.getX();
+//                            y = point.getY();
+//                            z = point.getZ();
+//                            
+//                            entry = new double[]{y, x};
+//                            pointsTree.addPoint(entry, z);
+//
+//                            if (x < minX) {
+//                                minX = x;
+//                            }
+//                            if (x > maxX) {
+//                                maxX = x;
+//                            }
+//                            if (y < minY) {
+//                                minY = y;
+//                            }
+//                            if (y > maxY) {
+//                                maxY = y;
+//                            }
+//                        }
+//                        progress = (int) (100d * (a + 1) / numPointsInFile);
+//                        if ((progress % 2) == 0) {
+//                            updateProgress("Reading point data:", progress);
+//                        }
+//                    }
+//                }
+//                
+//                outputHeader = pointFiles[j].replace(".las", suffix + ".dep");
+//                
+//                // see if the output files already exist, and if so, delete them.
+//                if ((new File(outputHeader)).exists()) {
+//                    (new File(outputHeader)).delete();
+//                    (new File(outputHeader.replace(".dep", ".tas"))).delete();
+//                }
+//            
+//                // What are north, south, east, and west and how many rows and 
+//                // columns should there be?
+//                west = minX - 0.5 * resolution;
+//                north = maxY + 0.5 * resolution;
+//                nrows = (int)(Math.ceil((north - minY) / resolution));
+//                ncols = (int)(Math.ceil((maxX - west) / resolution));
+//                south = north - nrows * resolution;
+//                east = west + ncols * resolution;
+//            
+//                // create the whitebox header file.
+//                fw = new FileWriter(outputHeader, false);
+//                bw = new BufferedWriter(fw);
+//                out = new PrintWriter(bw, true);
+//
+//                str1 = "Min:\t" + Double.toString(Integer.MAX_VALUE);
+//                out.println(str1);
+//                str1 = "Max:\t" + Double.toString(Integer.MIN_VALUE);
+//                out.println(str1);
+//                str1 = "North:\t" + Double.toString(north);
+//                out.println(str1);
+//                str1 = "South:\t" + Double.toString(south);
+//                out.println(str1);
+//                str1 = "East:\t" + Double.toString(east);
+//                out.println(str1);
+//                str1 = "West:\t" + Double.toString(west);
+//                out.println(str1);
+//                str1 = "Cols:\t" + Integer.toString(ncols);
+//                out.println(str1);
+//                str1 = "Rows:\t" + Integer.toString(nrows);
+//                out.println(str1);
+//                str1 = "Data Type:\t" + "float";
+//                out.println(str1);
+//                str1 = "Z Units:\t" + "not specified";
+//                out.println(str1);
+//                str1 = "XY Units:\t" + "not specified";
+//                out.println(str1);
+//                str1 = "Projection:\t" + "not specified";
+//                out.println(str1);
+//                str1 = "Data Scale:\tcontinuous"; 
+//                out.println(str1);
+//                str1 = "Preferred Palette:\t" + "spectrum.pal";
+//                out.println(str1);
+//                str1 = "NoData:\t" + noData;
+//                out.println(str1);
+//                if (java.nio.ByteOrder.nativeOrder() == java.nio.ByteOrder.LITTLE_ENDIAN) {
+//                    str1 = "Byte Order:\t" + "LITTLE_ENDIAN";
+//                } else {
+//                    str1 = "Byte Order:\t" + "BIG_ENDIAN";
+//                }
+//                out.println(str1);
+//
+//                out.close();
+//
+//                // Create the whitebox raster object.
+//                WhiteboxRaster image = new WhiteboxRaster(outputHeader, "rw");
+//                int numPointsToUse = 10;
+//                int numPointsInArea = 0;
+//                boolean flag = false;
+//                int maxIteration = 20;
+//                int k = 0;
+//                double halfResolution = resolution / 2;
+//                double area = Math.PI * maxDist; // maxDist is already the squared radius
+//                for (row = 0; row < nrows; row++) {
+//                    for (col = 0; col < ncols; col++) {
+//                        easting = (col * resolution) + (west + halfResolution);
+//                        northing = (north - halfResolution) - (row * resolution);
+//                        entry = new double[]{northing, easting};
+//                        
+//                        // keep increasing the numPointsToUse, until you have a point
+//                        // that is at a greater distance than maxDist.
+//                        numPointsToUse = 10;
+//                        flag = false;
+//                        k = 0;
+//                        do {
+//                            k++;
+//                            results = pointsTree.nearestNeighbor(entry, numPointsToUse, true);
+//                            for (i = 0; i < results.size(); i++) {
+//                                if (results.get(i).distance > maxDist) {
+//                                    flag = true;
+//                                }
+//                            }
+//                            if (!flag) {
+//                                numPointsToUse = numPointsToUse * 2;
+//                            }
+//                        } while (!flag && k < maxIteration);
+//                        
+//                        // how many points are within the radius?
+//                        numPointsInArea = 0;
+//                        for (i = 0; i < results.size(); i++) {
+//                            if (results.get(i).distance <= maxDist) {
+//                                numPointsInArea++;
+//                            }
+//                        }
+//                        
+//                        image.setValue(row, col, numPointsInArea / area);
+//                        
+//                    }
+//                    if (cancelOp) {
+//                        cancelOperation();
+//                        return;
+//                    }
+//                    progress = (int) (100f * row / (nrows - 1));
+//                    updateProgress("Calculating point density:", progress);
+//                }
+//
+//                image.addMetadataEntry("Created by the "
+//                        + getDescriptiveName() + " tool.");
+//                image.addMetadataEntry("Created on " + new Date());
+//
+//                image.close();
+//            }
+//            
+//            returnData(pointFiles[0].replace(".las", suffix + ".dep"));
+
+        } catch (OutOfMemoryError oe) {
+            //showFeedback("The Java Virtual Machine (JVM) is out of memory");
+        } catch (Exception e) {
+            //showFeedback(e.getMessage());
+        } finally {
+            //updateProgress("Progress: ", 0);
+            // tells the main application that this process is completed.
+            //amIActive = false;
+            //myHost.pluginComplete();
+        }
+
     }
     
     //Check to see if the passed cell is a local maximum or not and if so it returns the tree diameter and height
