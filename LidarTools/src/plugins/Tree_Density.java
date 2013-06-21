@@ -197,49 +197,12 @@ public class Tree_Density implements WhiteboxPlugin {
         amIActive = true;
 
         String inputFilesString = null;
-        String[] pointFiles;
-        String outputHeader = null;
-        int row, col;
-        int nrows, ncols;
-        double x, y;
-        double z = 0;
-        int a, i;
-        int progress = 0;
-        int numPoints = 0;
-        double maxDist = Double.POSITIVE_INFINITY;
-        double minX = Double.POSITIVE_INFINITY;
-        double maxX = Double.NEGATIVE_INFINITY;
-        double minY = Double.POSITIVE_INFINITY;
-        double maxY = Double.NEGATIVE_INFINITY;
-        double north, south, east, west;
-        double resolution = 1;
-        String str1 = null;
-        FileWriter fw = null;
-        BufferedWriter bw = null;
-        PrintWriter out = null;
-        List<KdTree.Entry<Double>> results;
-        double noData = -32768;
-        double northing, easting;
-        String returnNumberToInterpolate = "all points";
-        String suffix = "";
-        boolean excludeNeverClassified = false;
-        boolean excludeUnclassified = false;
-        boolean excludeBareGround = false;
-        boolean excludeLowVegetation = false;
-        boolean excludeMediumVegetation = false;
-        boolean excludeHighVegetation = false;
-        boolean excludeBuilding = false;
-        boolean excludeLowPoint = false;
-        boolean excludeModelKeyPoint = false;
-        boolean excludeWater = false;
-            
         // get the arguments
         if (args.length <= 0) {
             showFeedback("Plugin parameters have not been set.");
             return;
         }
         inputFilesString = args[0];
-        suffix = " " + args[1].trim();
         
         TreeFinder tf = new TreeFinder(args[0],args[0].replace(".dep", args[1] + ".shp"));
         tf.setThreshold(Double.parseDouble(args[2]));
@@ -248,7 +211,7 @@ public class Tree_Density implements WhiteboxPlugin {
         tf.setC(Double.parseDouble(args[5]));
         tf.setMaxHeight(Double.parseDouble(args[6]));
         tf.setOutputCellSize(Double.parseDouble(args[7]));
-        
+        tf.setSearchRadius(Double.parseDouble(args[8]));
         
         tf.Search();
         tf.Density();
@@ -278,6 +241,7 @@ public class Tree_Density implements WhiteboxPlugin {
         args[5] = "0.00901";
         args[6] = "50";
         args[7] = "1";
+        args[8] = "10";
 //        args[2] = "intensity";
 //        args[3] = "last return";
 //        args[4] = "4";

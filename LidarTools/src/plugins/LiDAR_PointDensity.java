@@ -323,7 +323,7 @@ public class LiDAR_PointDensity implements WhiteboxPlugin {
                 maxY = Double.NEGATIVE_INFINITY;
         
                 KdTree<Double> pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer(numPoints));
-            
+                
                 
                 // read the points in
                 if (returnNumberToInterpolate.equals("all points")) {
@@ -504,6 +504,7 @@ public class LiDAR_PointDensity implements WhiteboxPlugin {
                         do {
                             k++;
                             results = pointsTree.nearestNeighbor(entry, numPointsToUse, true);
+                            //results = pointsTree.neighborsWithinRange(entry,2500);
                             for (i = 0; i < results.size(); i++) {
                                 if (results.get(i).distance > maxDist) {
                                     flag = true;
@@ -555,18 +556,18 @@ public class LiDAR_PointDensity implements WhiteboxPlugin {
     }
       
 //    // this is only used for debugging the tool
-//    public static void main(String[] args) {
-//        LiDAR_PointDensity nn = new LiDAR_PointDensity();
-//        args = new String[17];
-//        args[0] = "/Users/johnlindsay/Documents/Data/u_5565073175.las";
-//        //args[0] = "/Users/johnlindsay/Documents/Data/u_5565073250.las";
-//        args[1] = " last return intensity";
-//        args[2] = "intensity";
-//        args[3] = "last return";
-//        args[4] = "4";
-//        args[5] = "1";
-//        nn.setArgs(args);
-//        nn.run();
-//        
-//    }
+    public static void main(String[] args) {
+        LiDAR_PointDensity nn = new LiDAR_PointDensity();
+        args = new String[17];
+        args[0] = "C:\\PDF\\Samples\\19_02564578.las";
+        //args[0] = "/Users/johnlindsay/Documents/Data/u_5565073250.las";
+        args[1] = " last return intensity";
+        args[2] = "intensity";
+        args[3] = "1";
+        args[4] = "4";
+        args[5] = "1";
+        nn.setArgs(args);
+        nn.run();
+        
+    }
 }
