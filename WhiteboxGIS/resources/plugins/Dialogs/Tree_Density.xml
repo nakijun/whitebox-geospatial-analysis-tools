@@ -81,5 +81,15 @@
 		<MakeOptional>False</MakeOptional>
 	</DialogComponent>
 
+        <DialogComponent type="DialogDataInput">
+		<Name>Radius</Name>
+		<Description>Enter Search Radious for Density</Description>
+		<LabelText>Search Radius</LabelText>
+		<IsVisible>True</IsVisible>
+		<InitialText>100</InitialText>
+		<NumericalInputOnly>Ture</NumericalInputOnly>
+		<MakeOptional>False</MakeOptional>
+	</DialogComponent>
+
 
 </Dialog>
