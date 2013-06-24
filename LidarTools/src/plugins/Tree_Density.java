@@ -218,6 +218,9 @@ public class Tree_Density implements WhiteboxPlugin {
         updateProgress("Shape file is done! Building the tree density raster ... ",50);
         
         tf.Density();
+        
+        returnData(tf.getOutputfile());
+        
         updateProgress("Tree density raster is done!",100);
         
         
@@ -238,7 +241,7 @@ public class Tree_Density implements WhiteboxPlugin {
         args[0] = "C:\\PDF\\John Example\\Data\\Data\\out1.dep";
         //args[0] = "/Users/johnlindsay/Documents/Data/u_5565073250.las";
         args[1] = "T";
-        args[2] = "2";
+        args[2] = "5";
         args[3] = "2.51503";
         args[4] = "0";
         args[5] = "0.00901";

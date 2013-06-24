@@ -366,42 +366,17 @@ public class TreeFinder {
                 int k = 0;
                 double halfResolution = resolution / 2;
                 double area = Math.PI * maxDist; // maxDist is already the squared radius
+                double[] rowVal = new double[ncols];
                 for (row = 0; row < nrows; row++) {
                     for (col = 0; col < ncols; col++) {
                         easting = (col * resolution) + (west + halfResolution);
                         northing = (north - halfResolution) - (row * resolution);
                         entry = new double[]{northing, easting};
-                        
-                        // keep increasing the numPointsToUse, until you have a point
-                        // that is at a greater distance than maxDist.
-                        numPointsToUse = 10;
-                        flag = false;
-                        k = 0;
-                        do {
-                            k++;
-                            results = pointsTree.nearestNeighbor(entry, numPointsToUse, true);
-                            //results = pointsTree.neighborsWithinRange(entry,2500);
-                            for (i = 0; i < results.size(); i++) {
-                                if (results.get(i).distance > maxDist) {
-                                    flag = true;
-                                }
-                            }
-                            if (!flag) {
-                                numPointsToUse = numPointsToUse * 2;
-                            }
-                        } while (!flag && k < maxIteration);
-                        
-                        // how many points are within the radius?
-                        numPointsInArea = 0;
-                        for (i = 0; i < results.size(); i++) {
-                            if (results.get(i).distance <= maxDist) {
-                                numPointsInArea++;
-                            }
-                        }
-                        
-                        image.setValue(row, col, numPointsInArea / area);
-                        
+                        results = pointsTree.neighborsWithinRange(entry,this.searchRadius);
+                        rowVal[col]=results.size()/ area;
+                        //image.setValue(row, col, numPointsInArea / area);
                     }
+                    image.setRowValues(row, rowVal);
 //                    if (cancelOp) {
 //                        cancelOperation();
 //                        return;
