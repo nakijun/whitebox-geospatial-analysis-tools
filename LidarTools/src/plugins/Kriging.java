@@ -5,6 +5,7 @@
 package plugins;
 
 import Jama.*;
+import java.awt.Color;
 //import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,6 +14,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Struct;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -21,10 +23,12 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import net.finmath.optimizer.LevenbergMarquardt;
 import net.finmath.optimizer.SolverException;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartFrame;
+import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.PlotOrientation;
@@ -32,8 +36,18 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.chart.renderer.xy.*;
 import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.GrayPaintScale;
+import org.jfree.chart.renderer.LookupPaintScale;
+import org.jfree.chart.renderer.PaintScale;
+import org.jfree.data.DomainOrder;
+import org.jfree.data.general.DatasetChangeListener;
+import org.jfree.data.general.DatasetGroup;
+import org.jfree.data.xy.DefaultXYZDataset;
 import org.jfree.data.xy.XYBarDataset;
 import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYZDataset;
+import org.jfree.ui.RectangleAnchor;
+import org.jfree.ui.RefineryUtilities;
 import whitebox.geospatialfiles.ShapeFile;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.geospatialfiles.WhiteboxRasterBase;
@@ -56,7 +70,6 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.structures.KdTree;
 import whitebox.structures.KdTree.Entry;
 
-
         
 /**
  *
@@ -65,6 +78,10 @@ import whitebox.structures.KdTree.Entry;
 public class Kriging {
     
     
+    public boolean Anisotropic;
+    public double BandWidth;
+    public double Angle;
+    public double Tolerance;
     
     public double resolution;
     //public double 
@@ -92,7 +109,6 @@ public class Kriging {
     //public double[][] Points;       //Array of points location x=0, y = 1, z = 2
     public double MaximumDistance;
     public bin[][] BinSurface;       //n*3 matrix to store all the binnes
-    
     public class point
     {
         double x;
@@ -120,7 +136,7 @@ public class Kriging {
     }
     
     //List<bin> Binnes = new ArrayList();
-    bin[][] Binnes; // = new bin[]
+    bin[][] Binnes; // = new bin[]      
     public class bin
     {
         double GridHorDistance;
@@ -129,9 +145,12 @@ public class Kriging {
         double VerDistance;
         double Distance;
         double Value;
+        double Weight;
         int Size;
     }
     public List<pair> Pairs = new ArrayList();
+    
+    private KdTree<Double> PairsTree;
     
     public SemiVariogramType SemiVariogramModel;
     public enum SemiVariogramType {
@@ -143,7 +162,12 @@ public class Kriging {
     public boolean ConsiderNugget;  //If nugget should be considered or not
     public SemiVariogramType SVType;
     
+    private int nthSVariogram;      //this is the nth SV for Anisotropic
     
+    
+    public void pp (){
+        
+    }
     
     public class Variogram{
         public double Range;
@@ -154,75 +178,84 @@ public class Kriging {
     
     
     
-    
     /**
-     * It calculates the average values for each bin.
-     * 
+     * it needs to be recode
      * @param Range 
      */
-    void CalcBinnesOld(double Range)
+    void CalcBinnes4Sec(double Range)
     {
-        double[][] b = new double [NumberOfLags+1][3]; //0 = Distance, 1 = Value, 2 = Size
-//        if (LagSize == 0) {
-//            LagSize = MaximumDistance/(NumberOfLags*2);
-//        }
-        int resd = 0;
-        for (int i = 0; i < Pairs.size(); i++) {
-            if (Pairs.get(i).Distance<= Range) {
-                resd =(int)((Pairs.get(i).Distance - (Pairs.get(i).Distance%LagSize))/LagSize);
-                //System.out.println(LagSize +" : "+ resd + " : " + Pairs.get(i).Distance);
-                b[resd][0]+=Pairs.get(i).Distance;
-                b[resd][1]+=Pairs.get(i).MomentI;
-                b[resd][2]+=1;
-            }
-        }
-        for (int i = 0; i < NumberOfLags; i++) {
-            bin bi = new bin();
-            bi.Distance = b[i][0]/b[i][2];
-            bi.Value = b[i][1]/b[i][2];
-            bi.Size = (int)b[i][2];
-            if (bi.Size>0) {
-                //Binnes.add(bi);
-            }
-        }
-    }
-    
-    
-     void CalcBinnes(double Range)
-    {
-        //Math.floor(MaxX);
-        
-        //Binnes = new bin[this.NumberOfLags][this.NumberOfLags];
-        //Binnes Category on the axies 
-        //2 . 1
-        //3   4         //Only 1 and 3 are calculated the rest are mirror
         int ad = 0;
         if (Range%this.LagSize == 0) {
             ad = 1;
         }
-        bin[][] Binnes1 = new bin[(int)Math.ceil(2*Range/this.LagSize)+ad]
+
+        if (!this.Anisotropic) {
+            Binnes = new bin[(int)Math.ceil(Range/this.LagSize)+ad][1];
+            int r = 0;
+            for (int i = 0; i < Pairs.size(); i++) {
+                if (Pairs.get(i).Distance<=Range && Pairs.get(i).HorDistance>=0) {
+                    r = (int)Math.floor(Pairs.get(i).Distance/LagSize);
+                    if (Binnes[r][0] == null) {
+                        bin bb = new bin();
+                        Binnes[r][0] = bb;
+                    }
+                    
+                    Binnes[r][0].Distance+=Pairs.get(i).Distance;
+                    Binnes[r][0].Value+=Pairs.get(i).MomentI;
+                    Binnes[r][0].Size ++;
+                }
+            }
+            for (int i = 0; i < Binnes.length; i++) {
+                if (Binnes[i][0] == null) {
+                    bin bb = new bin();
+                    Binnes[i][0] = bb;
+                }
+                Binnes[i][0].Distance=Binnes[i][0].Distance/Binnes[i][0].Size;
+                Binnes[i][0].Value=Binnes[i][0].Value/Binnes[i][0].Size;
+            }
+        }
+        //==========================
+        
+    }
+           
+
+
+     /**
+      * Calculates the Bin list for SV Map
+      * @param Range 
+      */
+    void CalcBinnes4Map(double Range)
+    {
+        
+        //Binnes = new bin[this.NumberOfLags][this.NumberOfLags];
+        //Binnes Category on the axies 
+        //2 . 1
+        //3   4         //Only 1 and 4 are calculated the rest are mirror
+        int ad = 0;
+        if (Range%this.LagSize == 0) {
+            ad = 1;
+        }
+        bin[][] Binnes1 = new bin[(int)Math.ceil(Range/this.LagSize)+ad]
                 [(int)Math.ceil(Range/this.LagSize+ad)];
-        bin[][] Binnes4 = new bin[(int)Math.ceil(2*Range/this.LagSize)+ad]
+        bin[][] Binnes4 = new bin[(int)Math.ceil(Range/this.LagSize)+ad]
                 [(int)Math.ceil(Range/this.LagSize+ad)];
 
         
-        bin[][] Binnes1c = new bin[(int)Math.ceil(2*Range/this.LagSize)+ad]
+        bin[][] Binnes1c = new bin[(int)Math.ceil(Range/this.LagSize)+ad]
                 [(int)Math.ceil(Range/this.LagSize+ad)];
-        bin[][] Binnes4c = new bin[(int)Math.ceil(2*Range/this.LagSize)+ad]
+        bin[][] Binnes4c = new bin[(int)Math.ceil(Range/this.LagSize)+ad]
                 [(int)Math.ceil(Range/this.LagSize+ad)];
 
         
-        BinSurface = new bin[2 * ((int)Math.ceil(2*Range/this.LagSize)+ad)][2*((int)Math.ceil(Range/this.LagSize+ad))];
+        BinSurface = new bin[2 * ((int)Math.ceil(Range/this.LagSize)+ad)][2*((int)Math.ceil(Range/this.LagSize+ad))];
+        //double radious =Math.sqrt(2*this.LagSize*this.LagSize);
+        double radious =this.LagSize*2/Math.sqrt(2);
+        double halfLagSize = this.LagSize;
+        List<pair> prs = new ArrayList();
+        double w = 0;
+        for (int r = 0; r < Binnes1.length; r++) {
+            for (int c = 0; c < Binnes1[r].length; c++) {
 
-
-        int c = 0;      //Columns
-        int r = 0;      //Rows
-        for (int i = 0; i < Pairs.size(); i++) {
-            if (Pairs.get(i).VerDistance>=0 && Pairs.get(i).HorDistance>=0 
-                    & Pairs.get(i).VerDistance<= 2* Range & Pairs.get(i).HorDistance<= Range) {
-                
-                r = Math.abs((int)Math.floor(Pairs.get(i).VerDistance/this.LagSize));
-                c = Math.abs((int)Math.floor(Pairs.get(i).HorDistance/this.LagSize));
                 if (Binnes1[r][c] == null) {
                     bin bb = new bin();
                     bin bbc = new bin();
@@ -230,18 +263,37 @@ public class Kriging {
                     Binnes1[r][c] = bb;
                     Binnes1c[r][c] = bbc;
                 }
-                Binnes1[r][c].HorDistance += Pairs.get(i).HorDistance;
-                Binnes1[r][c].VerDistance+= Pairs.get(i).VerDistance;
-                Binnes1[r][c].Value+= Pairs.get(i).MomentI;
-                Binnes1[r][c].Size+= 1;
-            
-                Binnes1c[r][c].HorDistance += -Pairs.get(i).HorDistance;
-                Binnes1c[r][c].VerDistance+= -Pairs.get(i).VerDistance;
-                Binnes1c[r][c].Value+= Pairs.get(i).MomentI;
-                Binnes1c[r][c].Size+= 1;
 
-            
-            
+                Binnes1[r][c].GridHorDistance= 0.5*this.LagSize + c*this.LagSize;
+                Binnes1[r][c].GridVerDistance= 0.5*this.LagSize + r*this.LagSize;
+                
+                
+                Binnes1c[r][c].GridHorDistance=-0.5*this.LagSize - c*this.LagSize;
+                Binnes1c[r][c].GridVerDistance=-0.5*this.LagSize - r*this.LagSize;
+
+                double[] center = new double[]{Binnes1[r][c].GridVerDistance,Binnes1[r][c].GridHorDistance};
+                prs = getBinNNPairs4Map(PairsTree, center, halfLagSize, radious);
+                
+                for (int n = 0; n < prs.size(); n++) {
+                    Binnes1[r][c].HorDistance += prs.get(n).HorDistance;
+                    Binnes1[r][c].VerDistance+= prs.get(n).VerDistance;
+                    w = (1-(Math.abs(Binnes1[r][c].GridHorDistance-prs.get(n).HorDistance)/this.LagSize))*
+                            (1-(Math.abs(Binnes1[r][c].GridVerDistance-prs.get(n).VerDistance)/this.LagSize));
+                    
+                    Binnes1[r][c].Weight += w;
+                    Binnes1[r][c].Value+= prs.get(n).MomentI*w;
+                    Binnes1[r][c].Size+= 1;
+                    
+
+                    Binnes1c[r][c].HorDistance += prs.get(n).HorDistance;
+                    Binnes1c[r][c].VerDistance+= prs.get(n).VerDistance;
+                    Binnes1c[r][c].Weight += w;
+
+                    Binnes1c[r][c].Value+= prs.get(n).MomentI*w;
+                    Binnes1c[r][c].Size+= 1;
+
+                    
+                }
             }
         }
         
@@ -263,19 +315,13 @@ public class Kriging {
                 else{
                     Binnes1[i][j].HorDistance = Binnes1[i][j].HorDistance/Binnes1[i][j].Size;
                     Binnes1[i][j].VerDistance=Binnes1[i][j].VerDistance/Binnes1[i][j].Size;
-                    Binnes1[i][j].Value = Binnes1[i][j].Value/Binnes1[i][j].Size;
+                    Binnes1[i][j].Value = Binnes1[i][j].Value/Binnes1[i][j].Weight;
                 
                     Binnes1c[i][j].HorDistance = Binnes1c[i][j].HorDistance/Binnes1c[i][j].Size;
                     Binnes1c[i][j].VerDistance=Binnes1c[i][j].VerDistance/Binnes1c[i][j].Size;
-                    Binnes1c[i][j].Value = Binnes1c[i][j].Value/Binnes1c[i][j].Size;
+                    Binnes1c[i][j].Value = Binnes1c[i][j].Value/Binnes1c[i][j].Weight;
                 }
-                Binnes1[i][j].GridHorDistance=0.5*this.LagSize + j*this.LagSize;
-                Binnes1[i][j].GridVerDistance=0.5*this.LagSize+i*this.LagSize;
 
-                Binnes1c[i][j].GridHorDistance=-0.5*this.LagSize - j*this.LagSize;
-                Binnes1c[i][j].GridVerDistance=-0.5*this.LagSize-i*this.LagSize;
-
-                //dddd= Pairs.get(i).HorDistance;
                 
                 //System.out.println( (0.5*this.LagSize + j*this.LagSize) + " , " + (0.5*this.LagSize+i*this.LagSize) + " , " +
                 //        Binnes1[i][j].HorDistance + " , " + Binnes1[i][j].VerDistance + " , " + Binnes1[i][j].Value);
@@ -283,33 +329,47 @@ public class Kriging {
         }
         //==========================
         
-        for (int i = 0; i < Pairs.size(); i++) {
-            if (Pairs.get(i).VerDistance<0 && Pairs.get(i).HorDistance>=0
-                    & Pairs.get(i).VerDistance >= -2*Range & Pairs.get(i).HorDistance<= Range) {
-                
-                r = Math.abs((int)Math.ceil(Pairs.get(i).VerDistance/this.LagSize));
-                c = Math.abs((int)Math.floor(Pairs.get(i).HorDistance/this.LagSize));
+        for (int r = 0; r < Binnes4.length; r++) {
+            for (int c = 0; c < Binnes4[r].length; c++) {
+
                 if (Binnes4[r][c] == null) {
                     bin bb = new bin();
-                    Binnes4[r][c] = bb;
-                    
                     bin bbc = new bin();
+
+                    Binnes4[r][c] = bb;
                     Binnes4c[r][c] = bbc;
-
                 }
-                
-                Binnes4[r][c].HorDistance += Pairs.get(i).HorDistance;
-                Binnes4[r][c].VerDistance+= Pairs.get(i).VerDistance;
-                Binnes4[r][c].Value+= Pairs.get(i).MomentI;
-                Binnes4[r][c].Size+= 1;
-            
-                Binnes4c[r][c].HorDistance += -Pairs.get(i).HorDistance;
-                Binnes4c[r][c].VerDistance+= -Pairs.get(i).VerDistance;
-                Binnes4c[r][c].Value+= Pairs.get(i).MomentI;
-                Binnes4c[r][c].Size+= 1;
 
-            
-            
+                Binnes4[r][c].GridHorDistance= 0.5*this.LagSize + c*this.LagSize;
+                Binnes4[r][c].GridVerDistance= - 0.5*this.LagSize - r*this.LagSize;
+                
+                
+                Binnes4c[r][c].GridHorDistance=-0.5*this.LagSize - c*this.LagSize;
+                Binnes4c[r][c].GridVerDistance= 0.5*this.LagSize + r*this.LagSize;
+
+                double[] center = new double[]{Binnes4[r][c].GridVerDistance,Binnes4[r][c].GridHorDistance};
+                prs = getBinNNPairs4Map(PairsTree, center, halfLagSize, radious);
+                
+                for (int n = 0; n < prs.size(); n++) {
+                    Binnes4[r][c].HorDistance += prs.get(n).HorDistance;
+                    Binnes4[r][c].VerDistance+= prs.get(n).VerDistance;
+                    w = (1-(Math.abs(Binnes4[r][c].GridHorDistance-prs.get(n).HorDistance)/this.LagSize))*
+                            (1-(Math.abs(Binnes4[r][c].GridVerDistance-prs.get(n).VerDistance)/this.LagSize));
+                    
+                    Binnes4[r][c].Weight += w;
+                    Binnes4[r][c].Value+= prs.get(n).MomentI*w;
+                    Binnes4[r][c].Size+= 1;
+                    
+
+                    Binnes4c[r][c].HorDistance += prs.get(n).HorDistance;
+                    Binnes4c[r][c].VerDistance+= prs.get(n).VerDistance;
+                    Binnes4c[r][c].Weight += w;
+
+                    Binnes4c[r][c].Value+= prs.get(n).MomentI*w;
+                    Binnes4c[r][c].Size+= 1;
+
+                    
+                }
             }
         }
         
@@ -319,40 +379,34 @@ public class Kriging {
                     bin bb = new bin();
                     Binnes4[i][j] = bb;
                     Binnes4[i][j].HorDistance = i*this.LagSize;
-                    Binnes4[i][j].VerDistance = -j*this.LagSize;
+                    Binnes4[i][j].VerDistance=j*this.LagSize;
                     Binnes4[i][j].Value = -1;
                 
                     bin bbc = new bin();
                     Binnes4c[i][j] = bbc;
                     Binnes4c[i][j].HorDistance = -i*this.LagSize;
-                    Binnes4c[i][j].VerDistance = j*this.LagSize;
+                    Binnes4c[i][j].VerDistance=-j*this.LagSize;
                     Binnes4c[i][j].Value = -1;
-
-                
-                
                 }
                 else{
                     Binnes4[i][j].HorDistance = Binnes4[i][j].HorDistance/Binnes4[i][j].Size;
                     Binnes4[i][j].VerDistance=Binnes4[i][j].VerDistance/Binnes4[i][j].Size;
-                    Binnes4[i][j].Value = Binnes4[i][j].Value/Binnes4[i][j].Size;
+                    Binnes4[i][j].Value = Binnes4[i][j].Value/Binnes4[i][j].Weight;
                 
                     Binnes4c[i][j].HorDistance = Binnes4c[i][j].HorDistance/Binnes4c[i][j].Size;
                     Binnes4c[i][j].VerDistance=Binnes4c[i][j].VerDistance/Binnes4c[i][j].Size;
-                    Binnes4c[i][j].Value = Binnes4c[i][j].Value/Binnes4c[i][j].Size;
-
+                    Binnes4c[i][j].Value = Binnes4c[i][j].Value/Binnes4c[i][j].Weight;
                 }
-                Binnes4[i][j].GridHorDistance=(0.5*this.LagSize+j*this.LagSize);
-                Binnes4[i][j].GridVerDistance=(-0.5*this.LagSize+-i*this.LagSize);
-                
-                Binnes4c[i][j].GridHorDistance=-(0.5*this.LagSize+j*this.LagSize);
-                Binnes4c[i][j].GridVerDistance=-(-0.5*this.LagSize+-i*this.LagSize);
 
                 
-                //System.out.println( (0.5*this.LagSize+j*this.LagSize) + " , " + (-0.5*this.LagSize+-i*this.LagSize) + " , " +
-                //        Binnes4[i][j].HorDistance + " , " + Binnes4[i][j].VerDistance + " , " + Binnes4[i][j].Value);
-                //System.out.println(i + " , " + j);
+                //System.out.println( (0.5*this.LagSize + j*this.LagSize) + " , " + (0.5*this.LagSize+i*this.LagSize) + " , " +
+                //        Binnes1[i][j].HorDistance + " , " + Binnes1[i][j].VerDistance + " , " + Binnes1[i][j].Value);
             }
         }
+        
+        
+        
+        
         int stI = BinSurface.length/2;
         int stJ = BinSurface[0].length/2;
         
@@ -376,120 +430,191 @@ public class Kriging {
         }
         
         
-        for (int i = 0; i < BinSurface.length; i++) {
-            for (int j = 0; j < BinSurface[i].length; j++) {
-                System.out.println(BinSurface[i][j].GridHorDistance + " , " + BinSurface[i][j].GridVerDistance
-                        + " , " + BinSurface[i][j].HorDistance+ " , " + BinSurface[i][j].VerDistance
-                        + " , " + BinSurface[i][j].Value);
-            }
-        }
-        
-        
-        
-        
-        
-        
+//        for (int i = 0; i < BinSurface.length; i++) {
+//            for (int j = 0; j < BinSurface[i].length; j++) {
+//                System.out.println(BinSurface[i][j].GridHorDistance + " , " + BinSurface[i][j].GridVerDistance
+//                        + " , " + BinSurface[i][j].HorDistance+ " , " + BinSurface[i][j].VerDistance
+//                        + " , " + BinSurface[i][j].Value);
+//            }
+//        }
         
         int resd = 0;
     }
-//    
-//    Variogram TheoryVariogram(SemiVariogramType semiType)
-//    {
-//        SVType = semiType;
-//        LevenbergMarquardt optimizer = new LevenbergMarquardt() {
-//                // Override your objective function here
-//                
-//            public void setValues(double[] parameters, double[] values) {
-//                //parameters[0] = sill, parameters[1] Range, parameters[2] nugget    
-//                double [] x = new double[Binnes.size()];
-//                    for (int i = 0; i < Binnes.size(); i++) {
-//                        x[i]=Binnes.get(i).Distance;
-//                    }
-//                    switch (SVType){
-//                        case Exponential:
-//                            for (int i = 0; i < x.length; i++) {
-//                                if (x[i]!=0) {
-//                                    values[i]= (ConsiderNugget ? parameters[2] : 0 ) + parameters[0]*(1-Math.exp(-x[i]/parameters[1]));
-//                                }
-//                                else{
-//                                    values[i]= 0;
-//                                }
-//                            }
-//                            break;
-//                        case Gaussian:
-//                            for (int i = 0; i < x.length; i++) {
-//                                if (x[i]!=0) {
-//                                    values[i]=(ConsiderNugget ? parameters[2] : 0 ) + parameters[0]*(1-Math.exp(-(Math.pow(x[i], 2))/(Math.pow( parameters[1],2))));
-//                                }
-//                                else{
-//                                    values[i]=0;
-//                                }
-//                            }
-//                            break;
-//                        case Spherical:
-//                            for (int i = 0; i < x.length; i++) {
-//                                if (x[0]>parameters[1]) {
-//                                    values[i]= (ConsiderNugget ? parameters[2] : 0 ) + parameters[0];
-//                                    
-//                                }
-//                                else if (0<x[0] && x[0] <=parameters[1]) {
-//                                    values[i]= (ConsiderNugget ? parameters[2] : 0 ) + parameters[0]*(1.5*x[i]/parameters[1]-0.5*Math.pow((x[i]/parameters[1]),3));
-//                                }
-//                                else
-//                                {
-//                                    values[i]= 0;
-//                                }
-//                            }
-//                            break;
-//                    }
-//                }
-//        };
-// 
-//
-//        // Set solver parameters
-//        
-//        double [] y = new double[Binnes.size()];
-//        for (int i = 0; i < y.length; i++) {
-//            y[i]=Binnes.get(i).Value;
-//            //System.out.println(Binnes.get(i).Distance);
-//        }
-//        double [] iniPar = new double[y.length];
-//        double [] w = new double[y.length];
-//        for (int i = 0; i < y.length; i++) {
-//            iniPar[i]=1;
-//            w[i]=1;
-//        }
-//        double tmp = 0;
-//        for (int i = 0; i < y.length; i++) {
-//            if ( !Double.isNaN(y[i])) {
-//                tmp += y[i];
-//            }
-//        }
-//        iniPar[1]=this.LagSize;
-//        iniPar[0]=tmp/y.length;
-//        optimizer.setInitialParameters(iniPar);
-//        optimizer.setWeights(w);
-//        optimizer.setMaxIteration(100);
-//        optimizer.setTargetValues(y);
-//        try {
-//            optimizer.run();
-//        } catch (SolverException ex) {
-//            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-// 
-//        double[] bestParameters = optimizer.getBestFitParameters();
-////        this.Sill = bestParameters[0];
-////        this.Range=bestParameters[1];
-////        this.Nugget = (ConsiderNugget ? bestParameters[2] : 0 );
-//        
-//        Variogram var = new Variogram();
-//        var.Sill = bestParameters[0];
-//        var.Range=bestParameters[1];
-//        var.Nugget =  (ConsiderNugget ? bestParameters[2] : 0 );
-//        var.Type = semiType;
-//        return var;
-//    }
-//    
+
+    
+    
+    
+   public void DrawSemiVariogramSurface(double Radius){
+        double [][] data = new double[3][BinSurface.length*BinSurface[0].length];
+        int n = 0;
+        double max = Double.MIN_VALUE;
+        for (int i = 0; i < BinSurface.length; i++) {
+            for (int j = 0; j < BinSurface[i].length; j++) {
+                data[0][n]=BinSurface[i][j].GridHorDistance;
+                data[1][n]=BinSurface[i][j].GridVerDistance;
+                if ((Math.pow(data[0][n],2)+Math.pow(data[1][n],2))<=Radius*Radius) {
+                    data[2][n]=BinSurface[i][j].Value;
+                    if (max<data[2][n]) {
+                        max = data[2][n];
+                    }
+                }
+                else{
+                    data[2][n]=-1;
+                }
+                n++;
+            }
+        }
+        DefaultXYZDataset dataset = new DefaultXYZDataset();
+        dataset.addSeries("Value", data);
+        NumberAxis xAxis = new NumberAxis();
+        
+        xAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        xAxis.setLowerMargin(0.0);
+        xAxis.setUpperMargin(0.0);
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+        yAxis.setLowerMargin(0.0);
+        yAxis.setUpperMargin(0.0);
+        XYBlockRenderer renderer = new XYBlockRenderer();
+        renderer.setBlockWidth(LagSize);
+        renderer.setBlockHeight(LagSize);
+        renderer.setBlockAnchor(RectangleAnchor.CENTER);
+        //PaintScale scale = new GrayPaintScale(0, 150000);
+        
+        LookupPaintScale paintScale = new LookupPaintScale(0,max,Color.white);
+        double colorRange = max/6;
+        //double colorRange = 23013;
+        paintScale.add(0.0, Color.blue);
+        paintScale.add(1 * colorRange, Color.green);
+        paintScale.add(2 * colorRange, Color.cyan);
+        paintScale.add(3 * colorRange, Color.yellow);
+        paintScale.add(4 * colorRange, Color.ORANGE);
+        paintScale.add(5 * colorRange, Color.red);
+        
+        
+        
+        renderer.setPaintScale(paintScale);
+        //renderer.setPaintScale(scale);
+        
+        XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
+        plot.setBackgroundPaint(Color.lightGray);
+        plot.setDomainGridlinesVisible(false);
+        plot.setRangeGridlinePaint(Color.white);
+        JFreeChart chart = new JFreeChart("Semi-Variogram Surface", plot);
+        chart.removeLegend();
+        chart.setBackgroundPaint(Color.white);
+       
+        // create and display a frame...
+        ChartFrame frame = new ChartFrame("",chart);
+        frame.pack();
+        //frame.setSize(100, 50);
+        frame.setVisible(true);
+    }
+    
+    /**
+     * 
+     * @param semiType
+     * @param n is the nth sector for anisotropic
+     * @return 
+     */
+    Variogram TheoryVariogram(SemiVariogramType semiType, int n)
+    {
+        SVType = semiType;
+        nthSVariogram = n;
+        LevenbergMarquardt optimizer = new LevenbergMarquardt() {
+                // Override your objective function here
+                
+            public void setValues(double[] parameters, double[] values) {
+                //parameters[0] = sill, parameters[1] Range, parameters[2] nugget    
+                double [] x = new double[Binnes.length];
+                    for (int i = 0; i < Binnes.length; i++) {
+                        x[i]=Binnes[i][ nthSVariogram].Distance;
+                    }
+                    switch (SVType){
+                        case Exponential:
+                            for (int i = 0; i < x.length; i++) {
+                                if (x[i]!=0) {
+                                    values[i]= (ConsiderNugget ? parameters[2] : 0 ) + parameters[0]*(1-Math.exp(-x[i]/parameters[1]));
+                                }
+                                else{
+                                    values[i]= 0;
+                                }
+                            }
+                            break;
+                        case Gaussian:
+                            for (int i = 0; i < x.length; i++) {
+                                if (x[i]!=0) {
+                                    values[i]=(ConsiderNugget ? parameters[2] : 0 ) + parameters[0]*(1-Math.exp(-(Math.pow(x[i], 2))/(Math.pow( parameters[1],2))));
+                                }
+                                else{
+                                    values[i]=0;
+                                }
+                            }
+                            break;
+                        case Spherical:
+                            for (int i = 0; i < x.length; i++) {
+                                if (x[0]>parameters[1]) {
+                                    values[i]= (ConsiderNugget ? parameters[2] : 0 ) + parameters[0];
+                                    
+                                }
+                                else if (0<x[0] && x[0] <=parameters[1]) {
+                                    values[i]= (ConsiderNugget ? parameters[2] : 0 ) + parameters[0]*(1.5*x[i]/parameters[1]-0.5*Math.pow((x[i]/parameters[1]),3));
+                                }
+                                else
+                                {
+                                    values[i]= 0;
+                                }
+                            }
+                            break;
+                    }
+                }
+        };
+ 
+
+        // Set solver parameters
+        
+        double [] y = new double[Binnes.length];
+        for (int i = 0; i < y.length; i++) {
+            y[i]=Binnes[i][n].Value;
+            //System.out.println(Binnes.get(i).Distance);
+        }
+        double [] iniPar = new double[y.length];
+        double [] w = new double[y.length];
+        for (int i = 0; i < y.length; i++) {
+            iniPar[i]=1;
+            w[i]=1;
+        }
+        double tmp = 0;
+        for (int i = 0; i < y.length; i++) {
+            if ( !Double.isNaN(y[i])) {
+                tmp += y[i];
+            }
+        }
+        iniPar[1]=this.LagSize;
+        iniPar[0]=tmp/y.length;
+        optimizer.setInitialParameters(iniPar);
+        optimizer.setWeights(w);
+        optimizer.setMaxIteration(100);
+        optimizer.setTargetValues(y);
+        try {
+            optimizer.run();
+        } catch (SolverException ex) {
+            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+        }
+ 
+        double[] bestParameters = optimizer.getBestFitParameters();
+//        this.Sill = bestParameters[0];
+//        this.Range=bestParameters[1];
+//        this.Nugget = (ConsiderNugget ? bestParameters[2] : 0 );
+        
+        Variogram var = new Variogram();
+        var.Sill = bestParameters[0];
+        var.Range=bestParameters[1];
+        var.Nugget =  (ConsiderNugget ? bestParameters[2] : 0 );
+        var.Type = semiType;
+        return var;
+    }
+    
     
     public double getTheoreticalSVValue(double Distance, Variogram vario){
         
@@ -847,6 +972,35 @@ public class Kriging {
         
         return pnts;
     }
+    
+    
+    
+    /**
+     * Returns the list of Pairs which are in the Nearest Neighborhood of the bin center point
+     * @param Tree
+     * @param entry (y,x)
+     * @param HalfBinSize
+     * @param Range is the search radius 
+     * @return 
+     */
+    private List<pair> getBinNNPairs4Map(KdTree<Double> Tree, double[] entry, double BinSize, double Range){
+        
+        List<KdTree.Entry<Double>> results;
+        results = Tree.neighborsWithinRange(entry,  Range);
+        List<pair> res = new ArrayList();
+        double xd = 0;
+        double yd = 0;
+        for (int i = 0; i < results.size(); i++) {
+            xd = Math.sqrt(Math.pow((Pairs.get(results.get(i).value.intValue()).HorDistance-entry[1]), 2));
+            yd = Math.sqrt(Math.pow((Pairs.get(results.get(i).value.intValue()).VerDistance-entry[0]), 2));
+            if (xd <= BinSize && yd <= BinSize) {
+                res.add(Pairs.get(results.get(i).value.intValue()));
+            }
+        }
+        return res;
+    }
+    
+    
     /**
      * Returns the list of nearest neighbor points
      * @param Tree
@@ -938,22 +1092,24 @@ public class Kriging {
      * It also calculates the min and max points and boundary
      * It also build the KDTree object to be used with the Kriging
      */
-    void CalPairsOld () throws FileNotFoundException{
+     void CalPairs4Sec () throws FileNotFoundException{
         MaximumDistance = 0;
         MinX = Double.POSITIVE_INFINITY;
         MinY = Double.POSITIVE_INFINITY;
         MaxX = Double.NEGATIVE_INFINITY;
         MaxY = Double.NEGATIVE_INFINITY;
         pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer(this.Points.size()));
+        PairsTree = new KdTree.SqrEuclid<Double>(2, new Integer(this.Points.size()*(this.Points.size()-1)/2));
         double[] entry;
+        double[] pairentry;
         
-        
-        String s= new String();
-        PrintWriter pw ;
-        pw = new PrintWriter("G:\\test.txt");
+//        String s= new String();
+//        PrintWriter pw ;
+//        pw = new PrintWriter("G:\\test.txt");
 
         
-        
+        double dx = 0;
+        double dy = 0;
         for (int i = 0; i < this.Points.size(); i++) {
             
             if (this.Points.get(i).x<MinX) { MinX = this.Points.get(i).x;}
@@ -964,54 +1120,76 @@ public class Kriging {
             entry = new double[]{this.Points.get(i).y, this.Points.get(i).x};
             pointsTree.addPoint(entry, (double)i);
             
+            
+            
             for (int j = 0; j < this.Points.size(); j++) {
                 pair pr = new pair();
-                pr.FirstP = i;
-                pr.SecondP = j;
-                pr.Distance = Math.sqrt(Math.pow((Points.get(i).x-Points.get(j).x),2)+
-                    Math.pow((Points.get(i).y-Points.get(j).y),2));
                 
-                if (MaximumDistance<pr.Distance) {
-                    MaximumDistance = pr.Distance;
+                if ( i != j) {
+     
+                    pr.FirstP = i;
+                    pr.SecondP = j;
+                    pr.Distance = Math.sqrt(Math.pow((Points.get(i).x-Points.get(j).x),2)+
+                        Math.pow((Points.get(i).y-Points.get(j).y),2));
+
+                        pr.HorDistance = (Points.get(j).x-Points.get(i).x);
+                        pr.VerDistance = (Points.get(j).y-Points.get(i).y);
+                    
+
+                    if (MaximumDistance<pr.Distance) {
+                        MaximumDistance = pr.Distance;
+                    }
+                    
+                    
+                    dx =Points.get(j).x-Points.get(i).x ;
+                    dy =Points.get(j).y-Points.get(i).y ;
+                    
+                    if (dx!=0) {
+                        if ((dx > 0 && dy >= 0)) {
+                            pr.Direction = Math.atan(dy/dx);
+                        }
+                        if (dx < 0 && dy >= 0) {
+                            pr.Direction = Math.atan(dy/dx)+Math.PI;
+                        }
+                        if (dx > 0 && dy < 0) {
+                            pr.Direction = Math.atan(dy/dx)+2*Math.PI;
+                        }
+                        if (dx < 0 && dy < 0) {
+                            pr.Direction = Math.atan(dy/dx)+Math.PI;;
+                        }
+                    }
+                    else{
+                        if (dy>=0) {
+                            pr.Direction = Math.PI/2;
+                        }
+                        else{
+                            pr.Direction = 3*Math.PI/2;
+                        }
+                    }
+                    pr.MomentI =Math.pow((Points.get(i).z - Points.get(j).z),2)/2;
+                    Pairs.add(pr);
+                    
+                    pairentry = new double[]{pr.VerDistance, pr.HorDistance};
+                    PairsTree.addPoint(pairentry, (double)Pairs.size()-1.0);
+
+//                    s =  Double.toString(pr.Distance) + "," + Double.toString(pr.Direction)+
+//                            "," + Double.toString(pr.MomentI)+
+//                            "," + Double.toString(pr.HorDistance)+
+//                            ","+Double.toString(pr.VerDistance)+
+//                            "," + Integer.toString(pr.FirstP)+
+//                            "," + Integer.toString(pr.SecondP);
+//
+//                    pw.println(s);
                 }
-                
-                if (Points.get(j).x>Points.get(i).x) {
-                    if (Points.get(j).y>Points.get(i).y) {
-                        pr.Direction = Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance);
-                    }
-                    else
-                    {
-                        pr.Direction = Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance)+2*Math.PI;
-                    }
-                }
-                else 
-                {
-                
-                    if (Points.get(j).y>Points.get(i).y) {
-                        pr.Direction =Math.PI - Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance);
-                    }
-                    else
-                    {
-                        pr.Direction = - Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance)+ Math.PI;
-                    }
-                }
-                pr.Direction = pr.Direction*180/Math.PI;
-                
-                pr.MomentI =Math.pow((Points.get(i).z - Points.get(j).z),2)/2;
-                Pairs.add(pr);
-                
-                
-                s =  Double.toString(pr.Distance) + "," + Double.toString(pr.Direction)+
-                        "," + Double.toString(pr.MomentI)+ "," + Integer.toString(pr.FirstP)+
-                        "," + Integer.toString(pr.SecondP);
-                
-                pw.println(s);
-                
                 
                 
             }
         }
-        pw.close();
+        
+        
+        
+        
+//        pw.close();
         //LagSize  = MaximumDistance/NumberOfLags;
         BMaxX = MaxX;
         BMaxY = MaxY;
@@ -1019,24 +1197,26 @@ public class Kriging {
         BMinY = MinY;
 
     }
-    
-    
-     void CalPairs () throws FileNotFoundException{
+     
+     void CalPairs4Map () throws FileNotFoundException{
         MaximumDistance = 0;
         MinX = Double.POSITIVE_INFINITY;
         MinY = Double.POSITIVE_INFINITY;
         MaxX = Double.NEGATIVE_INFINITY;
         MaxY = Double.NEGATIVE_INFINITY;
         pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer(this.Points.size()));
+        PairsTree = new KdTree.SqrEuclid<Double>(2, new Integer(this.Points.size()*(this.Points.size()-1)/2));
         double[] entry;
+        double[] pairentry;
         
-        
-        String s= new String();
-        PrintWriter pw ;
-        pw = new PrintWriter("G:\\test.txt");
+//        String s= new String();
+//        PrintWriter pw ;
+//        pw = new PrintWriter("G:\\test.txt");
 
         
         
+        double dx = 0;
+        double dy = 0;
         for (int i = 0; i < this.Points.size(); i++) {
             
             if (this.Points.get(i).x<MinX) { MinX = this.Points.get(i).x;}
@@ -1046,6 +1226,8 @@ public class Kriging {
             
             entry = new double[]{this.Points.get(i).y, this.Points.get(i).x};
             pointsTree.addPoint(entry, (double)i);
+            
+            
             
             for (int j = 0; j < this.Points.size(); j++) {
                 pair pr = new pair();
@@ -1065,47 +1247,56 @@ public class Kriging {
                     if (MaximumDistance<pr.Distance) {
                         MaximumDistance = pr.Distance;
                     }
-
-                    if (Points.get(j).x>Points.get(i).x) {
-                        if (Points.get(j).y>Points.get(i).y) {
-                            pr.Direction = Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance);
+                    dx =Points.get(j).x-Points.get(i).x ;
+                    dy =Points.get(j).y-Points.get(i).y ;
+                    
+                    if (dx!=0) {
+                        if ((dx > 0 && dy >= 0)) {
+                            pr.Direction = Math.atan(dy/dx);
                         }
-                        else
-                        {
-                            pr.Direction = Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance)+2*Math.PI;
+                        if (dx < 0 && dy >= 0) {
+                            pr.Direction = Math.atan(dy/dx)+Math.PI;
                         }
-                    }
-                    else 
-                    {
-
-                        if (Points.get(j).y>Points.get(i).y) {
-                            pr.Direction =Math.PI - Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance);
+                        if (dx > 0 && dy < 0) {
+                            pr.Direction = Math.atan(dy/dx)+2*Math.PI;
                         }
-                        else
-                        {
-                            pr.Direction = - Math.asin((Points.get(j).y-Points.get(i).y)/pr.Distance)+ Math.PI;
+                        if (dx < 0 && dy < 0) {
+                            pr.Direction = Math.atan(dy/dx)+Math.PI;;
                         }
                     }
-                    pr.Direction = pr.Direction*180/Math.PI;
+                    else{
+                        if (dy>=0) {
+                            pr.Direction = Math.PI/2;
+                        }
+                        else{
+                            pr.Direction = 3*Math.PI/2;
+                        }
+                    }
 
                     pr.MomentI =Math.pow((Points.get(i).z - Points.get(j).z),2)/2;
                     Pairs.add(pr);
+                    
+                    pairentry = new double[]{pr.VerDistance, pr.HorDistance};
+                    PairsTree.addPoint(pairentry, (double)Pairs.size()-1.0);
 
-
-                    s =  Double.toString(pr.Distance) + "," + Double.toString(pr.Direction)+
-                            "," + Double.toString(pr.MomentI)+
-                            "," + Double.toString(pr.HorDistance)+
-                            ","+Double.toString(pr.VerDistance)+
-                            "," + Integer.toString(pr.FirstP)+
-                            "," + Integer.toString(pr.SecondP);
-
-                    pw.println(s);
+//                    s =  Double.toString(pr.Distance) + "," + Double.toString(pr.Direction)+
+//                            "," + Double.toString(pr.MomentI)+
+//                            "," + Double.toString(pr.HorDistance)+
+//                            ","+Double.toString(pr.VerDistance)+
+//                            "," + Integer.toString(pr.FirstP)+
+//                            "," + Integer.toString(pr.SecondP);
+//
+//                    pw.println(s);
                 }
                 
                 
             }
         }
-        pw.close();
+        
+        
+        
+        
+//        pw.close();
         //LagSize  = MaximumDistance/NumberOfLags;
         BMaxX = MaxX;
         BMaxY = MaxY;
@@ -1120,49 +1311,41 @@ public class Kriging {
      * @param Binnes
      * @param Type 
      */
-    public void DrawSemiVariogram(List<bin> Binnes, Variogram variogram){
+    public void DrawSemiVariogram(bin[][] Binnes, Variogram variogram){
         XYSeriesCollection sampleCollct = new XYSeriesCollection();
         XYSeries series = new XYSeries("Sample Variogram");
-        int j = 0;
-        for (Iterator<bin> i = Binnes.iterator(); i.hasNext(); )
-        {
-            series.add(Binnes.get(j).Distance,Binnes.get(j).Value);
-            i.next();
-            j++;
-        }
-        sampleCollct.addSeries(series);
-        
-        double[][] res =  CalcTheoreticalSVValues(variogram, Binnes.get(Binnes.size()-1).Distance);
-        
-        XYSeries seriesTSV = new XYSeries("Theoretical Variogram");
-        
-        for (int i = 0; i < res.length; i++) {
-            seriesTSV.add(res[i][0],res[i][1]);
-        }
-
-        XYSeriesCollection theorCollct = new XYSeriesCollection();
-        
-        theorCollct.addSeries(seriesTSV);
-        
-        int t = 0;
-        
+//        for (Iterator<bin> i = Binnes.iterator(); i.hasNext(); )
+//        {
+//            series.add(Binnes.get(j).Distance,Binnes.get(j).Value);
+//            i.next();
+//            j++;
+//        }
         XYLineAndShapeRenderer xylineshapRend = new XYLineAndShapeRenderer(false, true);
-        
-        XYDataset xydataset = sampleCollct;
-        
-        XYPlot xyplot1 = new XYPlot(xydataset,new NumberAxis(),null, xylineshapRend);
-        
-        xyplot1.setDataset(1,theorCollct);
-        XYLineAndShapeRenderer lineshapRend = new XYLineAndShapeRenderer(true, false);
-        xyplot1.setRenderer(1, lineshapRend);
-        xyplot1.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
-        
-        //NumberAxis numberaxis = new NumberAxis("Value");
-        
-        //numberaxis.setAutoRangeIncludesZero(true);
-        
         CombinedRangeXYPlot combinedrangexyplot = new CombinedRangeXYPlot();
-        combinedrangexyplot.add (xyplot1);
+        for (int i = 0; i < Binnes[0].length; i++) {
+            for (int k = 0; k < Binnes.length; k++) {
+                series.add(Binnes[k][i].Distance,Binnes[k][i].Value);
+            }
+            sampleCollct.addSeries(series);
+            double[][] res =  CalcTheoreticalSVValues(variogram,  Binnes[Binnes.length-1][i].Distance);
+            XYSeries seriesTSV = new XYSeries("Theoretical Variogram");
+            for (int l = 0; l < res.length; l++) {
+                seriesTSV.add(res[l][0],res[l][1]);
+            }
+            XYSeriesCollection theorCollct = new XYSeriesCollection();
+            theorCollct.addSeries(seriesTSV);
+
+            XYDataset xydataset = sampleCollct;
+
+            XYPlot xyplot1 = new XYPlot(xydataset,new NumberAxis(),null, xylineshapRend);
+
+            xyplot1.setDataset(1,theorCollct);
+            XYLineAndShapeRenderer lineshapRend = new XYLineAndShapeRenderer(true, false);
+            xyplot1.setRenderer(1, lineshapRend);
+            xyplot1.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
+            combinedrangexyplot.add (xyplot1);
+
+        }
         
         JFreeChart chart = new JFreeChart("Semivariogram",
 				JFreeChart.DEFAULT_TITLE_FONT, combinedrangexyplot, true);
@@ -1191,45 +1374,86 @@ public class Kriging {
      * @param Type
      * @param DistanseRatio is the ratio of the maximum distance in point to the maximum distance of the variogram
      * @param NumberOfLags 
+     * @param Map   If true it calculate the pairs and Binnes for SV Map
      */
-    public Variogram SemiVariogram(SemiVariogramType Type, double DistanseRatio, int NumberOfLags){
+
+    public void calcBinSurface(SemiVariogramType Type, double DistanseRatio, int NumberOfLags,
+            boolean Anisotropic){
         this.NumberOfLags = NumberOfLags;
         try {
-            CalPairs();
+            CalPairs4Map();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
         }
         if (this.LagSize ==0) {
             this.LagSize = (this.MaximumDistance*DistanseRatio)/this.NumberOfLags;
         }
-        
-        CalcBinnes(this.LagSize*this.NumberOfLags);
-        return null; //TheoryVariogram(Type);
+
+        CalcBinnes4Map(this.LagSize*this.NumberOfLags);
+
+    }
+    public Variogram SemiVariogram(SemiVariogramType Type, double DistanseRatio, int NumberOfLags,
+            boolean Anisotropic){
+        this.NumberOfLags = NumberOfLags;
+        try {
+            CalPairs4Sec();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        if (this.LagSize ==0) {
+            this.LagSize = (this.MaximumDistance*DistanseRatio)/this.NumberOfLags;
+        }
+        CalcBinnes4Sec(this.LagSize*this.NumberOfLags);
+
+        int n =0;
+        if (!Anisotropic) {
+            n = 0;
+        }
+        else{
+            
+        }
+        return TheoryVariogram(Type,n);
     }
     
+   
     public static void main(String[] args) 
     {
+        //ChartPanel(createChart(createDataset()));
+        
         Kriging k = new Kriging();
+        
         
         //k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\Sample\\Sample.shp","V");
         k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\WakerLake\\WakerLake.shp","V");
         k.ConsiderNugget = false;
         k.LagSize = 5;
-        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 10);
+        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 9,false);
         k.resolution = 2.5;
+        k.DrawSemiVariogram(k.Binnes, var);
         List<point> pnts = k.calcInterpolationPoints();
         
+//        var.Range = 50;
+//        var.Sill = 104843.2;
+//        var.Type = SemiVariogramType.Exponential;
+//
+//        
         
-        //var.Range = 43.56409;
-        //var.Sill = 96147.91;
-        //var.Type = SemiVariogramType.Exponential;
+        pnts = k.InterpolatePoints(var, pnts,10);
+        k.BuildRaster("G:\\Papers\\AGU 2013\\WakerLake\\WakerLakeOut15.dep", pnts);
+        
+        
+        k.calcBinSurface(SemiVariogramType.Exponential,  0.27, 9,false);
+        k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags+1));
+        
+        
+        
+        
+     
         //Kriging.point p = k.point(65, 137, 0);
 //        List<Kriging.point> pnts = new ArrayList();
 //        pnts.add(p);
         
-        pnts = k.InterpolatePoints(var, pnts,5);
-        k.BuildRaster("G:\\Papers\\AGU 2013\\WakerLake\\WakerLakeOut50.dep", pnts);
         
-        //k.DrawSemiVariogram(k.Binnes, var);
+        
     }
 }
