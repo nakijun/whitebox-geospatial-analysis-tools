@@ -186,14 +186,55 @@ public class Kriging {
     {
         int ad = 0;
         if (Range%this.LagSize == 0) {
-            ad = 1;
+            ad = 0;
         }
 
         if (!this.Anisotropic) {
             Binnes = new bin[(int)Math.ceil(Range/this.LagSize)+ad][1];
             int r = 0;
             for (int i = 0; i < Pairs.size(); i++) {
-                if (Pairs.get(i).Distance<=Range && Pairs.get(i).HorDistance>=0) {
+                if (Pairs.get(i).Distance<Range && Pairs.get(i).HorDistance>=0) {
+                    r = (int)Math.floor(Pairs.get(i).Distance/LagSize);
+                    if (Binnes[r][0] == null) {
+                        bin bb = new bin();
+                        Binnes[r][0] = bb;
+                    }
+                    
+                    Binnes[r][0].Distance+=Pairs.get(i).Distance;
+                    Binnes[r][0].Value+=Pairs.get(i).MomentI;
+                    Binnes[r][0].Size ++;
+                }
+            }
+            for (int i = 0; i < Binnes.length; i++) {
+                if (Binnes[i][0] == null) {
+                    bin bb = new bin();
+                    Binnes[i][0] = bb;
+                }
+                Binnes[i][0].Distance=Binnes[i][0].Distance/Binnes[i][0].Size;
+                Binnes[i][0].Value=Binnes[i][0].Value/Binnes[i][0].Size;
+            }
+        }
+        //==========================
+        
+    }
+           
+     void CalcBinnes4Sec(double Range, double Angle, double Tolerance, double BandWidth)
+    {
+        int ad = 0;
+        if (Range%this.LagSize == 0) {
+            ad = 0;
+        }
+        double width = 0;
+
+        if (this.Anisotropic) {
+            
+            Binnes = new bin[(int)Math.ceil(Range/this.LagSize)+ad][1];
+            int r = 0;
+            for (int i = 0; i < Pairs.size(); i++) {
+                boolean tt = Between(Angle, Tolerance, Pairs.get(i).Direction);
+                width = Pairs.get(i).Distance* Math.cos((Math.PI/2)-Angle+Pairs.get(i).Direction);
+                if (tt && Pairs.get(i).Distance<Range && Math.abs(width)<= BandWidth) {
+                    
                     r = (int)Math.floor(Pairs.get(i).Distance/LagSize);
                     if (Binnes[r][0] == null) {
                         bin bb = new bin();
@@ -219,7 +260,39 @@ public class Kriging {
     }
            
 
+     private boolean Between(double Angle, double Tolerance, double Direction){
+         
+         boolean flag=false;
+         double la = (Angle-Tolerance);
+         if (la<0) {
+             la = 2*Math.PI + la;
+             flag = true;
+         }
 
+         double ha = (Angle+Tolerance);
+         if (ha >= 2* Math.PI) {
+             ha = ha - 2* Math.PI;
+             flag = true;
+         }
+         
+         if (flag) {
+             if (Direction>=ha && Direction <= la) {
+                 return false;
+             }
+             else{
+                 return true;
+             }
+         }
+         else{
+             if (Direction>= la && Direction<=ha) {
+                 return true;
+             }
+             else{
+                 return false;
+             }
+         }
+     }
+     
      /**
       * Calculates the Bin list for SV Map
       * @param Range 
@@ -233,7 +306,7 @@ public class Kriging {
         //3   4         //Only 1 and 4 are calculated the rest are mirror
         int ad = 0;
         if (Range%this.LagSize == 0) {
-            ad = 1;
+            ad = 0;
         }
         bin[][] Binnes1 = new bin[(int)Math.ceil(Range/this.LagSize)+ad]
                 [(int)Math.ceil(Range/this.LagSize+ad)];
@@ -500,6 +573,119 @@ public class Kriging {
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
+        
+        
+        CombinedRangeXYPlot combinedrangexyplot = new CombinedRangeXYPlot();
+        XYSeries seriesT1 = new XYSeries("1");
+        XYSeriesCollection AngleCollct = new XYSeriesCollection();
+        
+        double bw = BandWidth;
+        double r = bw / Math.sin(Tolerance);
+        if (r>Radius) {
+            bw = Radius* Math.sin(Tolerance);
+            r = Radius;
+        }
+        //seriesT1.add(r*Math.cos(Angle+Tolerance)+(Radius - r*Math.cos(Tolerance))*Math.cos(Angle),
+        //        r*Math.sin(Angle+Tolerance)+(Radius - r*Math.sin(Tolerance))*Math.sin(Angle));
+        seriesT1.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
+        if (Math.sin(Angle)!=0) {
+            double a = (1+Math.pow(Math.tan(Angle),2));
+            double b = 2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
+            double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
+            double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+            double y1 = Math.tan(Angle)*(x1+bw/Math.sin(Angle));
+            double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+            double y2 = Math.tan(Angle)*(x2+bw/Math.sin(Angle));
+            double d1 = Math.sqrt((Math.pow((r*Math.cos(Angle+Tolerance)-x1), 2))+(Math.pow((r*Math.sin(Angle+Tolerance)-y1), 2)));
+            double d2 = Math.sqrt((Math.pow((r*Math.cos(Angle+Tolerance)-x2), 2))+(Math.pow((r*Math.sin(Angle+Tolerance)-y2), 2)));
+            if (d1<d2) {
+                seriesT1.add(x1,y1);
+            }
+            else{
+                seriesT1.add(x2,y2);
+            }
+        }
+        else{
+            double y1 = bw;
+            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+            seriesT1.add(x1,y1);
+        }
+        
+        
+        AngleCollct.addSeries(seriesT1);
+        
+        XYSeries seriesT2 = new XYSeries("2");
+        seriesT2.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
+        seriesT2.add(0.0,0.0);
+        AngleCollct.addSeries(seriesT2);
+       
+
+        XYSeries seriesT3 = new XYSeries("3");
+        seriesT3.add(Radius*Math.cos(Angle),Radius*Math.sin(Angle));
+        seriesT3.add(0,0);
+        AngleCollct.addSeries(seriesT3);
+        
+        XYSeries seriesT4 = new XYSeries("4");
+        seriesT4.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
+        seriesT4.add(0,0);
+        AngleCollct.addSeries(seriesT4);
+
+        XYSeries seriesT5 = new XYSeries("5");
+        //seriesT5.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
+        //seriesT5.add(r*Math.cos(Angle-Tolerance)+(Radius - r*Math.cos(Tolerance))*Math.cos(Angle),
+        //        r*Math.sin(Angle-Tolerance)+(Radius - r*Math.sin(Tolerance))*Math.sin(Angle));
+        
+        seriesT5.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
+        if (Math.sin(Angle)!=0) {
+            double a = (1+Math.pow(Math.tan(Angle),2));
+            double b = -2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
+            double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
+            double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+            double y1 = Math.tan(Angle)*(x1-bw/Math.sin(Angle));
+            double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+            double y2 = Math.tan(Angle)*(x2-bw/Math.sin(Angle));
+            double d1 = Math.sqrt((Math.pow((r*Math.cos(Angle-Tolerance)-x1), 2))+(Math.pow((r*Math.sin(Angle-Tolerance)-y1), 2)));
+            double d2 = Math.sqrt((Math.pow((r*Math.cos(Angle-Tolerance)-x2), 2))+(Math.pow((r*Math.sin(Angle-Tolerance)-y2), 2)));
+            if (d1<d2) {
+                seriesT5.add(x1,y1);
+            }
+            else{
+                seriesT5.add(x2,y2);
+            }
+        }
+        else{
+            double y1 = bw;
+            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+            seriesT5.add(x1,y1);
+        }
+        
+        
+        AngleCollct.addSeries(seriesT5);
+
+        
+        
+        plot.setDataset(1,AngleCollct);
+        
+        
+         
+        
+        XYLineAndShapeRenderer lineshapRend = new XYLineAndShapeRenderer(true, false);
+         for (int i = 0; i < AngleCollct.getSeriesCount(); i++) {
+           //plot.getRenderer().setSeriesPaint(i , Color.BLUE);
+           lineshapRend.setSeriesPaint(i , Color.BLACK);
+        }
+
+        plot.setRenderer(1, lineshapRend);
+        
+       
+        
+        
+        plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
+        
+        combinedrangexyplot.add (plot);
+
+       
+        
         JFreeChart chart = new JFreeChart("Semi-Variogram Surface", plot);
         chart.removeLegend();
         chart.setBackgroundPaint(Color.white);
@@ -1403,14 +1589,16 @@ public class Kriging {
         if (this.LagSize ==0) {
             this.LagSize = (this.MaximumDistance*DistanseRatio)/this.NumberOfLags;
         }
-        CalcBinnes4Sec(this.LagSize*this.NumberOfLags);
+        
 
         int n =0;
         if (!Anisotropic) {
             n = 0;
+            CalcBinnes4Sec(this.LagSize*this.NumberOfLags);
         }
         else{
-            
+            n = 0;
+            CalcBinnes4Sec(this.LagSize*this.NumberOfLags,this.Angle,this.Tolerance,this.BandWidth);
         }
         return TheoryVariogram(Type,n);
     }
@@ -1423,11 +1611,17 @@ public class Kriging {
         Kriging k = new Kriging();
         
         
+        
         //k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\Sample\\Sample.shp","V");
         k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\WakerLake\\WakerLake.shp","V");
         k.ConsiderNugget = false;
         k.LagSize = 5;
-        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 9,false);
+        k.Anisotropic = true;
+        k.Angle = Math.PI*1.4;
+        k.Tolerance = Math.PI/3;
+        k.BandWidth = 9*k.LagSize;
+        
+        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 20,true);
         k.resolution = 2.5;
         k.DrawSemiVariogram(k.Binnes, var);
         List<point> pnts = k.calcInterpolationPoints();
@@ -1442,8 +1636,8 @@ public class Kriging {
         k.BuildRaster("G:\\Papers\\AGU 2013\\WakerLake\\WakerLakeOut15.dep", pnts);
         
         
-        k.calcBinSurface(SemiVariogramType.Exponential,  0.27, 9,false);
-        k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags+1));
+        k.calcBinSurface(SemiVariogramType.Exponential,  0.27, 20,false);
+        k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags));
         
         
         
