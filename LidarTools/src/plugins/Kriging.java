@@ -588,27 +588,54 @@ public class Kriging {
         //seriesT1.add(r*Math.cos(Angle+Tolerance)+(Radius - r*Math.cos(Tolerance))*Math.cos(Angle),
         //        r*Math.sin(Angle+Tolerance)+(Radius - r*Math.sin(Tolerance))*Math.sin(Angle));
         seriesT1.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
-        if (Math.sin(Angle)!=0) {
-            double a = (1+Math.pow(Math.tan(Angle),2));
-            double b = 2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
-            double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
-            double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-            double y1 = Math.tan(Angle)*(x1+bw/Math.sin(Angle));
-            double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-            double y2 = Math.tan(Angle)*(x2+bw/Math.sin(Angle));
-            double d1 = Math.sqrt((Math.pow((r*Math.cos(Angle+Tolerance)-x1), 2))+(Math.pow((r*Math.sin(Angle+Tolerance)-y1), 2)));
-            double d2 = Math.sqrt((Math.pow((r*Math.cos(Angle+Tolerance)-x2), 2))+(Math.pow((r*Math.sin(Angle+Tolerance)-y2), 2)));
+        
+        //if (Math.sin(Angle)>0.000001 && Math.sin(Angle)<-0.000001) {
+        if ((double)Math.round(Math.sin(Angle) * 10000) / 10000!=0) {
+            if ((double)Math.round(Math.cos(Angle) * 10000) / 10000!=0) {
+                double a = (1+Math.pow(Math.tan(Angle),2));
+                double b = 2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
+                double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
+                double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                double y1 = Math.tan(Angle)*(x1+bw/Math.sin(Angle));
+                double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                double y2 = Math.tan(Angle)*(x2+bw/Math.sin(Angle));
+                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+                if (d1<d2) {
+                    seriesT1.add(x1,y1);
+                }
+                else{
+                    seriesT1.add(x2,y2);
+                }
+            }
+            else{
+                double x1 = -bw*Math.sin(Angle);
+                double y1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                double y2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+
+                if (d1<d2) {
+                    seriesT1.add(x1,y1);
+                }
+                else{
+                    seriesT1.add(x1,y2);
+                }
+            }
+        }
+        else{
+            double y1 = bw*Math.cos(Angle);
+            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+            double x2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+            double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+            double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+            
             if (d1<d2) {
                 seriesT1.add(x1,y1);
             }
             else{
-                seriesT1.add(x2,y2);
+                seriesT1.add(x2,y1);
             }
-        }
-        else{
-            double y1 = bw;
-            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
-            seriesT1.add(x1,y1);
         }
         
         
@@ -636,27 +663,52 @@ public class Kriging {
         //        r*Math.sin(Angle-Tolerance)+(Radius - r*Math.sin(Tolerance))*Math.sin(Angle));
         
         seriesT5.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
-        if (Math.sin(Angle)!=0) {
-            double a = (1+Math.pow(Math.tan(Angle),2));
-            double b = -2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
-            double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
-            double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-            double y1 = Math.tan(Angle)*(x1-bw/Math.sin(Angle));
-            double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-            double y2 = Math.tan(Angle)*(x2-bw/Math.sin(Angle));
-            double d1 = Math.sqrt((Math.pow((r*Math.cos(Angle-Tolerance)-x1), 2))+(Math.pow((r*Math.sin(Angle-Tolerance)-y1), 2)));
-            double d2 = Math.sqrt((Math.pow((r*Math.cos(Angle-Tolerance)-x2), 2))+(Math.pow((r*Math.sin(Angle-Tolerance)-y2), 2)));
+       if ((double)Math.round(Math.sin(Angle) * 10000) / 10000!=0) {
+            if ((double)Math.round(Math.cos(Angle) * 10000) / 10000!=0) {
+                double a = (1+Math.pow(Math.tan(Angle),2));
+                double b = -2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
+                double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
+                double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                double y1 = Math.tan(Angle)*(x1-bw/Math.sin(Angle));
+                double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                double y2 = Math.tan(Angle)*(x2-bw/Math.sin(Angle));
+                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+                if (d1<d2) {
+                    seriesT5.add(x1,y1);
+                }
+                else{
+                    seriesT5.add(x2,y2);
+                }
+            }
+            else{
+                double x1 = bw*Math.sin(Angle);
+                double y1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                double y2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+
+                if (d1<d2) {
+                    seriesT5.add(x1,y1);
+                }
+                else{
+                    seriesT5.add(x1,y2);
+                }
+            }
+        }
+        else{
+            double y1 = -bw*Math.cos(Angle);
+            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+            double x2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+            double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+            double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+            
             if (d1<d2) {
                 seriesT5.add(x1,y1);
             }
             else{
-                seriesT5.add(x2,y2);
+                seriesT5.add(x2,y1);
             }
-        }
-        else{
-            double y1 = bw;
-            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
-            seriesT5.add(x1,y1);
         }
         
         
@@ -1617,8 +1669,8 @@ public class Kriging {
         k.ConsiderNugget = false;
         k.LagSize = 5;
         k.Anisotropic = true;
-        k.Angle = Math.PI*1.4;
-        k.Tolerance = Math.PI/3;
+        k.Angle = Math.PI/4;
+        k.Tolerance = Math.PI/4;
         k.BandWidth = 9*k.LagSize;
         
         Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 20,true);
