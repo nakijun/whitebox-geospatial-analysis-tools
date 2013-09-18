@@ -164,10 +164,7 @@ public class Kriging {
     
     private int nthSVariogram;      //this is the nth SV for Anisotropic
     
-    
-    public void pp (){
-        
-    }
+   
     
     public class Variogram{
         public double Range;
@@ -179,7 +176,7 @@ public class Kriging {
     
     
     /**
-     * it needs to be recode
+     * Calculates the bin values based on sector classification and for isotropic model
      * @param Range 
      */
     void CalcBinnes4Sec(double Range)
@@ -217,7 +214,14 @@ public class Kriging {
         //==========================
         
     }
-           
+    
+     /**
+      * Calculates the bin values based on sector classification and for AnIsotropic model
+      * @param Range
+      * @param Angle
+      * @param Tolerance
+      * @param BandWidth 
+      */      
      void CalcBinnes4Sec(double Range, double Angle, double Tolerance, double BandWidth)
     {
         int ad = 0;
@@ -259,7 +263,13 @@ public class Kriging {
         
     }
            
-
+     /**
+      * Checks to see if a pair is located in a sector of interest or not
+      * @param Angle
+      * @param Tolerance
+      * @param Direction
+      * @return 
+      */
      private boolean Between(double Angle, double Tolerance, double Direction){
          
          boolean flag=false;
@@ -516,8 +526,12 @@ public class Kriging {
 
     
     
-    
-   public void DrawSemiVariogramSurface(double Radius){
+   /**
+    * Draw Semivariogram surface map and also draw the search are if Anisotropic
+    * @param Radius
+    * @param AnIsotropic 
+    */ 
+   public void DrawSemiVariogramSurface(double Radius, boolean AnIsotropic){
         double [][] data = new double[3][BinSurface.length*BinSurface[0].length];
         int n = 0;
         double max = Double.MIN_VALUE;
@@ -552,7 +566,6 @@ public class Kriging {
         renderer.setBlockWidth(LagSize);
         renderer.setBlockHeight(LagSize);
         renderer.setBlockAnchor(RectangleAnchor.CENTER);
-        //PaintScale scale = new GrayPaintScale(0, 150000);
         
         LookupPaintScale paintScale = new LookupPaintScale(0,max,Color.white);
         double colorRange = max/6;
@@ -567,177 +580,154 @@ public class Kriging {
         
         
         renderer.setPaintScale(paintScale);
-        //renderer.setPaintScale(scale);
         
         XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinesVisible(false);
         plot.setRangeGridlinePaint(Color.white);
         
-        
-        CombinedRangeXYPlot combinedrangexyplot = new CombinedRangeXYPlot();
-        XYSeries seriesT1 = new XYSeries("1");
-        XYSeriesCollection AngleCollct = new XYSeriesCollection();
-        
-        double bw = BandWidth;
-        double r = bw / Math.sin(Tolerance);
-        if (r>Radius) {
-            bw = Radius* Math.sin(Tolerance);
-            r = Radius;
-        }
-        //seriesT1.add(r*Math.cos(Angle+Tolerance)+(Radius - r*Math.cos(Tolerance))*Math.cos(Angle),
-        //        r*Math.sin(Angle+Tolerance)+(Radius - r*Math.sin(Tolerance))*Math.sin(Angle));
-        seriesT1.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
-        
-        //if (Math.sin(Angle)>0.000001 && Math.sin(Angle)<-0.000001) {
-        if ((double)Math.round(Math.sin(Angle) * 10000) / 10000!=0) {
-            if ((double)Math.round(Math.cos(Angle) * 10000) / 10000!=0) {
-                double a = (1+Math.pow(Math.tan(Angle),2));
-                double b = 2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
-                double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
-                double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-                double y1 = Math.tan(Angle)*(x1+bw/Math.sin(Angle));
-                double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-                double y2 = Math.tan(Angle)*(x2+bw/Math.sin(Angle));
-                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
-                if (d1<d2) {
-                    seriesT1.add(x1,y1);
-                }
-                else{
-                    seriesT1.add(x2,y2);
-                }
-            }
-            else{
-                double x1 = -bw*Math.sin(Angle);
-                double y1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
-                double y2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
-                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+        if (AnIsotropic) {
+              CombinedRangeXYPlot combinedrangexyplot = new CombinedRangeXYPlot();
+              XYSeries seriesT1 = new XYSeries("1");
+              XYSeriesCollection AngleCollct = new XYSeriesCollection();
 
-                if (d1<d2) {
-                    seriesT1.add(x1,y1);
-                }
-                else{
-                    seriesT1.add(x1,y2);
-                }
-            }
-        }
-        else{
-            double y1 = bw*Math.cos(Angle);
-            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
-            double x2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
-            double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-            double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-            
-            if (d1<d2) {
-                seriesT1.add(x1,y1);
-            }
-            else{
-                seriesT1.add(x2,y1);
-            }
-        }
-        
-        
-        AngleCollct.addSeries(seriesT1);
-        
-        XYSeries seriesT2 = new XYSeries("2");
-        seriesT2.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
-        seriesT2.add(0.0,0.0);
-        AngleCollct.addSeries(seriesT2);
-       
+              double bw = BandWidth;
+              double r = bw / Math.sin(Tolerance);
+              if (r>Radius) {
+                  bw = Radius* Math.sin(Tolerance);
+                  r = Radius;
+              }
+              seriesT1.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
 
-        XYSeries seriesT3 = new XYSeries("3");
-        seriesT3.add(Radius*Math.cos(Angle),Radius*Math.sin(Angle));
-        seriesT3.add(0,0);
-        AngleCollct.addSeries(seriesT3);
-        
-        XYSeries seriesT4 = new XYSeries("4");
-        seriesT4.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
-        seriesT4.add(0,0);
-        AngleCollct.addSeries(seriesT4);
+              if ((double)Math.round(Math.sin(Angle) * 10000) / 10000!=0) {
+                  if ((double)Math.round(Math.cos(Angle) * 10000) / 10000!=0) {
+                      double a = (1+Math.pow(Math.tan(Angle),2));
+                      double b = 2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
+                      double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
+                      double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                      double y1 = Math.tan(Angle)*(x1+bw/Math.sin(Angle));
+                      double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                      double y2 = Math.tan(Angle)*(x2+bw/Math.sin(Angle));
+                      double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                      double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+                      if (d1<d2) {
+                          seriesT1.add(x1,y1);
+                      }
+                      else{
+                          seriesT1.add(x2,y2);
+                      }
+                  }
+                  else{
+                      double x1 = -bw*Math.sin(Angle);
+                      double y1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                      double y2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                      double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                      double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
 
-        XYSeries seriesT5 = new XYSeries("5");
-        //seriesT5.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
-        //seriesT5.add(r*Math.cos(Angle-Tolerance)+(Radius - r*Math.cos(Tolerance))*Math.cos(Angle),
-        //        r*Math.sin(Angle-Tolerance)+(Radius - r*Math.sin(Tolerance))*Math.sin(Angle));
-        
-        seriesT5.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
-       if ((double)Math.round(Math.sin(Angle) * 10000) / 10000!=0) {
-            if ((double)Math.round(Math.cos(Angle) * 10000) / 10000!=0) {
-                double a = (1+Math.pow(Math.tan(Angle),2));
-                double b = -2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
-                double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
-                double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-                double y1 = Math.tan(Angle)*(x1-bw/Math.sin(Angle));
-                double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
-                double y2 = Math.tan(Angle)*(x2-bw/Math.sin(Angle));
-                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
-                if (d1<d2) {
-                    seriesT5.add(x1,y1);
-                }
-                else{
-                    seriesT5.add(x2,y2);
-                }
-            }
-            else{
-                double x1 = bw*Math.sin(Angle);
-                double y1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
-                double y2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
-                double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-                double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+                      if (d1<d2) {
+                          seriesT1.add(x1,y1);
+                      }
+                      else{
+                          seriesT1.add(x1,y2);
+                      }
+                  }
+              }
+              else{
+                  double y1 = bw*Math.cos(Angle);
+                  double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+                  double x2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+                  double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                  double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
 
-                if (d1<d2) {
-                    seriesT5.add(x1,y1);
-                }
-                else{
-                    seriesT5.add(x1,y2);
-                }
-            }
+                  if (d1<d2) {
+                      seriesT1.add(x1,y1);
+                  }
+                  else{
+                      seriesT1.add(x2,y1);
+                  }
+              }
+
+
+              AngleCollct.addSeries(seriesT1);
+
+              XYSeries seriesT2 = new XYSeries("2");
+              seriesT2.add(r*Math.cos(Angle+Tolerance),r*Math.sin(Angle+Tolerance));
+              seriesT2.add(0.0,0.0);
+              AngleCollct.addSeries(seriesT2);
+
+
+              XYSeries seriesT3 = new XYSeries("3");
+              seriesT3.add(Radius*Math.cos(Angle),Radius*Math.sin(Angle));
+              seriesT3.add(0,0);
+              AngleCollct.addSeries(seriesT3);
+
+              XYSeries seriesT4 = new XYSeries("4");
+              seriesT4.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
+              seriesT4.add(0,0);
+              AngleCollct.addSeries(seriesT4);
+
+              XYSeries seriesT5 = new XYSeries("5");
+
+
+              seriesT5.add(r*Math.cos(Angle-Tolerance),r*Math.sin(Angle-Tolerance));
+             if ((double)Math.round(Math.sin(Angle) * 10000) / 10000!=0) {
+                  if ((double)Math.round(Math.cos(Angle) * 10000) / 10000!=0) {
+                      double a = (1+Math.pow(Math.tan(Angle),2));
+                      double b = -2* bw/Math.sin(Angle) * Math.pow(Math.tan(Angle), 2);
+                      double c =  Math.pow(Math.tan(Angle), 2)*Math.pow(bw/Math.sin(Angle),2)-Math.pow(Radius,2);
+                      double x1 = (-b + Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                      double y1 = Math.tan(Angle)*(x1-bw/Math.sin(Angle));
+                      double x2 = (-b - Math.sqrt(Math.pow(b, 2)-4*a*c))/(2*a);
+                      double y2 = Math.tan(Angle)*(x2-bw/Math.sin(Angle));
+                      double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                      double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+                      if (d1<d2) {
+                          seriesT5.add(x1,y1);
+                      }
+                      else{
+                          seriesT5.add(x2,y2);
+                      }
+                  }
+                  else{
+                      double x1 = bw*Math.sin(Angle);
+                      double y1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                      double y2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(x1, 2));
+                      double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                      double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y2), 2)));
+
+                      if (d1<d2) {
+                          seriesT5.add(x1,y1);
+                      }
+                      else{
+                          seriesT5.add(x1,y2);
+                      }
+                  }
+              }
+              else{
+                  double y1 = -bw*Math.cos(Angle);
+                  double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+                  double x2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
+                  double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+                  double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
+
+                  if (d1<d2) {
+                      seriesT5.add(x1,y1);
+                  }
+                  else{
+                      seriesT5.add(x2,y1);
+                  }
+              }
+              AngleCollct.addSeries(seriesT5);
+              plot.setDataset(1,AngleCollct);
+              XYLineAndShapeRenderer lineshapRend = new XYLineAndShapeRenderer(true, false);
+               for (int i = 0; i < AngleCollct.getSeriesCount(); i++) {
+                 //plot.getRenderer().setSeriesPaint(i , Color.BLUE);
+                 lineshapRend.setSeriesPaint(i , Color.BLACK);
+              }
+              plot.setRenderer(1, lineshapRend);
+              combinedrangexyplot.add (plot);
         }
-        else{
-            double y1 = -bw*Math.cos(Angle);
-            double x1 = Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
-            double x2 = -Math.sqrt(Math.pow(Radius, 2)-Math.pow(y1, 2));
-            double d1 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x1), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-            double d2 = Math.sqrt((Math.pow((Radius*Math.cos(Angle)-x2), 2))+(Math.pow((Radius*Math.sin(Angle)-y1), 2)));
-            
-            if (d1<d2) {
-                seriesT5.add(x1,y1);
-            }
-            else{
-                seriesT5.add(x2,y1);
-            }
-        }
-        
-        
-        AngleCollct.addSeries(seriesT5);
-
-        
-        
-        plot.setDataset(1,AngleCollct);
-        
-        
-         
-        
-        XYLineAndShapeRenderer lineshapRend = new XYLineAndShapeRenderer(true, false);
-         for (int i = 0; i < AngleCollct.getSeriesCount(); i++) {
-           //plot.getRenderer().setSeriesPaint(i , Color.BLUE);
-           lineshapRend.setSeriesPaint(i , Color.BLACK);
-        }
-
-        plot.setRenderer(1, lineshapRend);
-        
-       
-        
-        
         plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
-        
-        combinedrangexyplot.add (plot);
-
-       
-        
         JFreeChart chart = new JFreeChart("Semi-Variogram Surface", plot);
         chart.removeLegend();
         chart.setBackgroundPaint(Color.white);
@@ -853,7 +843,12 @@ public class Kriging {
         return var;
     }
     
-    
+    /**
+     * Calculates the Theoretical SV value to be drawn on the SV
+     * @param Distance
+     * @param vario
+     * @return 
+     */
     public double getTheoreticalSVValue(double Distance, Variogram vario){
         
         double res= 0.0;
@@ -933,6 +928,13 @@ public class Kriging {
         return res;
     }
     //Reads the points coordinates in a shapefile
+    
+    /**
+     * Reads the point in a shapfile based on its field name
+     * @param inputFile
+     * @param fieldName
+     * @return 
+     */
     public List<point> ReadPointFile(String inputFile, String fieldName)
     {
         int fieldNum = 0;
@@ -1074,6 +1076,11 @@ public class Kriging {
         return pnts;
     }
     
+    /**
+     * Produces the output raster
+     * @param outputRaster
+     * @param pnts 
+     */
     public void BuildRaster(String outputRaster, List<point> pnts){
         double north, south, east, west;
         int nrows, ncols;
@@ -1326,7 +1333,7 @@ public class Kriging {
     }
     
     /**
-     * Creates the pairs. calcs the distance and moment of inertia for each pair
+     * Creates the pairs list based on sector classification. calcs the distance and moment of inertia for each pair
      * It also calculates the min and max points and boundary
      * It also build the KDTree object to be used with the Kriging
      */
@@ -1435,7 +1442,10 @@ public class Kriging {
         BMinY = MinY;
 
     }
-     
+     /**
+      * Creates the pairs list based for Map classification 
+      * @throws FileNotFoundException 
+      */
      void CalPairs4Map () throws FileNotFoundException{
         MaximumDistance = 0;
         MinX = Double.POSITIVE_INFINITY;
@@ -1605,16 +1615,15 @@ public class Kriging {
         frame.setVisible(true);
     }
     
+    
+    
     /**
-     * This Calculates the Sill and Range Value for the Theoretical Semi Variogram
-     * Points list should be filled first
-     * This function fills the Sill and Range in the Kriging object 
+     * This is the main method to classify the pairs for the map and to calc the bin average on the map
      * @param Type
-     * @param DistanseRatio is the ratio of the maximum distance in point to the maximum distance of the variogram
-     * @param NumberOfLags 
-     * @param Map   If true it calculate the pairs and Binnes for SV Map
+     * @param DistanseRatio
+     * @param NumberOfLags
+     * @param Anisotropic 
      */
-
     public void calcBinSurface(SemiVariogramType Type, double DistanseRatio, int NumberOfLags,
             boolean Anisotropic){
         this.NumberOfLags = NumberOfLags;
@@ -1630,6 +1639,15 @@ public class Kriging {
         CalcBinnes4Map(this.LagSize*this.NumberOfLags);
 
     }
+    /**
+     * This Calculates the Sill and Range Value for the Theoretical Semi Variogram
+     * Points list should be filled first
+     * This function fills the Sill and Range in the Kriging object 
+     * @param Type
+     * @param DistanseRatio is the ratio of the maximum distance in point to the maximum distance of the variogram
+     * @param NumberOfLags 
+     * @param Map   If true it calculate the pairs and Binnes for SV Map
+     */
     public Variogram SemiVariogram(SemiVariogramType Type, double DistanseRatio, int NumberOfLags,
             boolean Anisotropic){
         this.NumberOfLags = NumberOfLags;
@@ -1689,7 +1707,7 @@ public class Kriging {
         
         
         k.calcBinSurface(SemiVariogramType.Exponential,  0.27, 20,false);
-        k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags));
+        k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags),true);
         
         
         
