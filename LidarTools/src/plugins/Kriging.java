@@ -69,6 +69,7 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.structures.KdTree;
 import whitebox.structures.KdTree.Entry;
+import java.util.Random;
 
         
 /**
@@ -1673,7 +1674,14 @@ public class Kriging {
         return TheoryVariogram(Type,n);
     }
     
-   
+    public List<point> RandomizePoints(List<point> pnts , int n){
+        Random rnd = new Random();
+        List<point> res = new ArrayList();
+        for (int i = 0; i < n; i++) {
+            res.add(pnts.get(rnd.nextInt(n)));
+        }
+        return res;
+    }
     public static void main(String[] args) 
     {
         //ChartPanel(createChart(createDataset()));
@@ -1683,15 +1691,19 @@ public class Kriging {
         
         
         //k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\Sample\\Sample.shp","V");
-        k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\WakerLake\\WakerLake.shp","V");
+        //k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\WakerLake\\WakerLake.shp","V");
+        k.Points  =  k.ReadPointFile("G:\\Optimized Sensory Network\\PALS\\AGU\\SV_Test.shp","v");
+        k.Points = k.RandomizePoints(k.Points, 500);
+        
+        
         k.ConsiderNugget = false;
         k.LagSize = 5;
         k.Anisotropic = true;
-        k.Angle = Math.PI/4;
+        k.Angle = Math.PI*3/4;
         k.Tolerance = Math.PI/4;
         k.BandWidth = 9*k.LagSize;
         
-        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 20,true);
+        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 10,true);
         k.resolution = 2.5;
         k.DrawSemiVariogram(k.Binnes, var);
         List<point> pnts = k.calcInterpolationPoints();
