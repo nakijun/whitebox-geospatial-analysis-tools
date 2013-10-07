@@ -540,7 +540,8 @@ public class Kriging {
             for (int j = 0; j < BinSurface[i].length; j++) {
                 data[0][n]=BinSurface[i][j].GridHorDistance;
                 data[1][n]=BinSurface[i][j].GridVerDistance;
-                if ((Math.pow(data[0][n],2)+Math.pow(data[1][n],2))<=Radius*Radius) {
+                if ((Math.pow(data[0][n],2)+Math.pow(data[1][n],2))<=Radius*Radius && 
+                        !Double.isNaN(BinSurface[i][j].Value)) {
                     data[2][n]=BinSurface[i][j].Value;
                     if (max<data[2][n]) {
                         max = data[2][n];
@@ -1205,15 +1206,49 @@ public class Kriging {
             //double[][] d = {{1,2,3},{4,5,6,},{7,8,10}};
             Matrix tmp = Matrix.constructWithCopy(C);
             Matrix VariableCoef = Matrix.constructWithCopy(D);
-            Matrix w = tmp.solve(VariableCoef);
-            double[][] Wi =  w.getArray();
-            double s = 0;
-            for (int i = 0; i < Wi.length-1; i++) {
-                s = s + Wi[i][0]*NNPoitns.get(i).z;
+            Matrix w = null;
+            boolean flag = false;
+            try{
+                w = tmp.solve(VariableCoef);
+                double[][] Wi =  w.getArray();
+                double s = 0;
+                for (int i = 0; i < Wi.length-1; i++) {
+                    s = s + Wi[i][0]*NNPoitns.get(i).z;
+                }
+                pnts.get(n).z = s;
+                //res[n]=s;
+                s = 0;
+
+            }catch(Exception ex){
+                SingularValueDecomposition svd = tmp.svd();
+                Matrix u = svd.getU();
+                Matrix s = svd.getS();
+                Matrix v = svd.getV();
+                //u.print(u.getRowDimension(), u.getColumnDimension());
+                //s.print(s.getRowDimension(), s.getColumnDimension());
+                //v.print(v.getRowDimension(), v.getColumnDimension());
+                
+                int rrr = svd.rank();
+                double[][] stemp = s.getArray();
+                for (int nn = 0; nn < stemp.length; nn++) {
+                    if (stemp[nn][nn]>0.03) {
+                        stemp[nn][nn]=1/stemp[nn][nn];
+                    }
+                    else{
+                        stemp[nn][nn]=0;
+                    }
+                }
+                Matrix sp = new Matrix(stemp);
+                w = v.times(sp).times(u.transpose()).times(VariableCoef);
+                //Matrix test = tmp.times(w).minus(VariableCoef);
+                double[][] Wi =  w.getArray();
+                double ss = 0;
+                for (int i = 0; i < Wi.length-1; i++) {
+                    ss = ss + Wi[i][0]*NNPoitns.get(i).z;
+                }
+                pnts.get(n).z = ss;
+                ss=0;                
             }
-            pnts.get(n).z = s;
-            //res[n]=s;
-            s = 0;
         }
         
         return pnts;
@@ -1349,7 +1384,7 @@ public class Kriging {
         double[] entry;
         double[] pairentry;
         
-//        String s= new String();
+        String s= new String();
 //        PrintWriter pw ;
 //        pw = new PrintWriter("G:\\test.txt");
 
@@ -1424,8 +1459,8 @@ public class Kriging {
 //                            ","+Double.toString(pr.VerDistance)+
 //                            "," + Integer.toString(pr.FirstP)+
 //                            "," + Integer.toString(pr.SecondP);
-//
-//                    pw.println(s);
+
+                    //System.out.println(s);
                 }
                 
                 
@@ -1673,40 +1708,85 @@ public class Kriging {
         }
         return TheoryVariogram(Type,n);
     }
-    
+    /**
+     * Randomly selects the n points from the entered point list
+     * This is not a necessary method to use but with large point list (More than 1000 points)
+     * It is better to apply it
+     * @param pnts
+     * @param n
+     * @return 
+     */
     public List<point> RandomizePoints(List<point> pnts , int n){
         Random rnd = new Random();
         List<point> res = new ArrayList();
+        double drnd =0.0;
         for (int i = 0; i < n; i++) {
-            res.add(pnts.get(rnd.nextInt(n)));
+            res.add(pnts.get(rnd.nextInt(pnts.size())));
         }
         return res;
     }
     public static void main(String[] args) 
     {
         //ChartPanel(createChart(createDataset()));
-        
         Kriging k = new Kriging();
+        k.ConsiderNugget = false;
+        k.LagSize = 2500;
+        k.Anisotropic = false;
+//        k.Angle = Math.PI*3/4;
+//        k.Tolerance = Math.PI/4;
+//        k.BandWidth = 3*k.LagSize;
+        for (int i = 0; i < 50; i++) {
+            k.Points  =  k.ReadPointFile("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100.shp","h");
+            k.Points = k.RandomizePoints(k.Points, 200);
+            Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 1, 25,false);
+            k.resolution = 900;
+            List<point> pnts = k.calcInterpolationPoints();
+            pnts = k.InterpolatePoints(var, pnts, 5);
+            k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100"+ i +".dep", pnts);
+        }
         
-        
+        //k.DrawSemiVariogram(k.Binnes, var);
+        //k.calcBinSurface(SemiVariogramType.Spherical,  0.27, 25,false);
+        //k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags),false);
         
         //k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\Sample\\Sample.shp","V");
         //k.Points  =  k.ReadPointFile("G:\\Papers\\AGU 2013\\WakerLake\\WakerLake.shp","V");
-        k.Points  =  k.ReadPointFile("G:\\Optimized Sensory Network\\PALS\\AGU\\SV_Test.shp","v");
-        k.Points = k.RandomizePoints(k.Points, 500);
+        
+       
+        
+//        String s= new String();
+//        PrintWriter pw = null ;
+//        try {
+//            pw = new PrintWriter("G:\\test.txt");
+//        } catch (FileNotFoundException ex) {
+//            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        
+//        for (int i = 0; i < 500; i++) {
+//            Kriging k = new Kriging();
+//            k.ConsiderNugget = false;
+//            k.LagSize = 50;
+//            k.Anisotropic = true;
+//            k.Angle = Math.PI*3/4;
+//            k.Tolerance = Math.PI/4;
+//            k.BandWidth = 3*k.LagSize;
+//            k.Points  =  k.ReadPointFile("G:\\Optimized Sensory Network\\PALS\\AGU\\SV_Test.shp","v");
+//            k.Points = k.RandomizePoints(k.Points, 500);
+//            Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 99,true);
+//            s =  var.Range + " , " + var.Sill;
+//
+//
+//            pw.println(s);
+//            pw.flush();
+//            k = null;
+//        }
+//             pw.close();;
         
         
-        k.ConsiderNugget = false;
-        k.LagSize = 5;
-        k.Anisotropic = true;
-        k.Angle = Math.PI*3/4;
-        k.Tolerance = Math.PI/4;
-        k.BandWidth = 9*k.LagSize;
         
-        Variogram var = k.SemiVariogram(SemiVariogramType.Exponential, 0.27, 10,true);
-        k.resolution = 2.5;
-        k.DrawSemiVariogram(k.Binnes, var);
-        List<point> pnts = k.calcInterpolationPoints();
+        //k.resolution = 2.5;
+        //k.DrawSemiVariogram(k.Binnes, var);
+        //List<point> pnts = k.calcInterpolationPoints();
         
 //        var.Range = 50;
 //        var.Sill = 104843.2;
@@ -1714,12 +1794,12 @@ public class Kriging {
 //
 //        
         
-        pnts = k.InterpolatePoints(var, pnts,10);
-        k.BuildRaster("G:\\Papers\\AGU 2013\\WakerLake\\WakerLakeOut15.dep", pnts);
+        //pnts = k.InterpolatePoints(var, pnts,10);
+        //k.BuildRaster("G:\\Papers\\AGU 2013\\WakerLake\\WakerLakeOut15.dep", pnts);
         
         
-        k.calcBinSurface(SemiVariogramType.Exponential,  0.27, 20,false);
-        k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags),true);
+        //k.calcBinSurface(SemiVariogramType.Exponential,  0.27, 99,false);
+        //k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags),true);
         
         
         
