@@ -19,8 +19,8 @@ import jmetal.util.JMException;
 
 public class SensorOptimizerProblem extends Problem{
     // defining the lower and upper limits
-  public static final double [] LOWERLIMIT = {0.01, 0.01};
-  public static final double [] UPPERLIMIT = {0.45, 0.10};           
+  public static final double [] LOWERLIMIT = {587993, 5474193};
+  public static final double [] UPPERLIMIT = {601703, 5546399};           
     public void test(){
         Kriging k = new Kriging();
     }
@@ -29,19 +29,23 @@ public class SensorOptimizerProblem extends Problem{
   * Creates a default instance of the Water problem.
   * @param solutionType The solution type must "Real" or "BinaryReal".
   */
-  public SensorOptimizerProblem(String solutionType) {
-    numberOfVariables_   = 2 ;
+  public SensorOptimizerProblem(String solutionType, int NV) {
+    numberOfVariables_   = NV *2 ;
     numberOfObjectives_  = 2 ;
-    numberOfConstraints_ = 1 ;
-    problemName_         = "Test";
+    numberOfConstraints_ = 0 ;
+    problemName_         = "SensorOptimizer";
 	        
     upperLimit_ = new double[numberOfVariables_];
     lowerLimit_ = new double[numberOfVariables_];
     upperLimit_ = new double[numberOfVariables_];
     lowerLimit_ = new double[numberOfVariables_];
-    for (int var = 0; var < numberOfVariables_; var++){
-      lowerLimit_[var] = LOWERLIMIT[var];
-      upperLimit_[var] = UPPERLIMIT[var];
+    for (int var = 0; var < numberOfVariables_; var=var+2){
+      lowerLimit_[var] = LOWERLIMIT[0];
+      upperLimit_[var] = UPPERLIMIT[0];
+
+      lowerLimit_[var+1] = LOWERLIMIT[1];
+      upperLimit_[var+1] = UPPERLIMIT[1];
+
     } // for
 	        
     if (solutionType.compareTo("BinaryReal") == 0)
