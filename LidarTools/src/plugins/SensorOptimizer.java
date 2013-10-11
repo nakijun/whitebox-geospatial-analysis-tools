@@ -29,6 +29,7 @@ import jmetal.metaheuristics.nsgaII.NSGAII;
 import static jmetal.metaheuristics.nsgaII.NSGAII_main.fileHandler_;
 import static jmetal.metaheuristics.nsgaII.NSGAII_main.logger_;
 import jmetal.problems.Roshani;
+import whitebox.geospatialfiles.WhiteboxRaster;
 
 
 
@@ -36,11 +37,31 @@ public class SensorOptimizer {
     public static Logger      logger_ ;      // Logger object
     public static FileHandler fileHandler_ ; // FileHandler object
   
+    public WhiteboxRaster OpenTargetRaster (String inputRaster){
+        WhiteboxRaster image;
+        image = new WhiteboxRaster(inputRaster, "r");
+        
+        int rows = image.getNumberRows();
+        int cols = image.getNumberColumns();
+        double rowSize = image.getCellSizeY();
+        double colSize = image.getCellSizeX();
+        double[][] value;
+        value = new double[rows][cols];
+        for (int r = 0; r < rows; r++) {
+            value[r]=image.getRowValues(r);
+        }
+        return image;
+    }
+
+    
      public static void main(String [] args) throws 
                                   JMException, 
                                   SecurityException, 
                                   IOException, 
                                   ClassNotFoundException {
+         
+     SensorOptimizer so = new SensorOptimizer();
+     WhiteboxRaster img = so.OpenTargetRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\20120607flt.dep");
     Problem   problem   ; // The problem to solve
     Algorithm algorithm ; // The algorithm to use
     Operator  crossover ; // Crossover operator
@@ -67,7 +88,7 @@ public class SensorOptimizer {
       indicators = new QualityIndicator(problem, args[1]) ;
     } // if
     else { // Default problem
-        problem = new SensorOptimizerProblem("Real", 10);
+        problem = new SensorOptimizerProblem("Real", 100, img);
       //problem = new Roshani("Real");
       //problem = new Kursawe("BinaryReal", 3);
       //problem = new Water("Real");
@@ -81,8 +102,8 @@ public class SensorOptimizer {
     //algorithm = new ssNSGAII(problem);
 
     // Algorithm parameters
-    algorithm.setInputParameter("populationSize",100);
-    algorithm.setInputParameter("maxEvaluations",25000);
+    algorithm.setInputParameter("populationSize",50);
+    algorithm.setInputParameter("maxEvaluations",10000);
 
     // Mutation and Crossover for Real codification 
     parameters = new HashMap() ;

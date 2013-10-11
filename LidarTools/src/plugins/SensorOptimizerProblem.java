@@ -8,6 +8,8 @@ package plugins;
  *
  * @author Dr. Ehsan Roshani
  */
+import java.util.ArrayList;
+import java.util.List;
 import plugins.Kriging;
 import jmetal.core.Problem;
 import jmetal.core.Solution;
@@ -16,20 +18,30 @@ import jmetal.encodings.solutionType.RealSolutionType;
 import static jmetal.problems.Water.LOWERLIMIT;
 import static jmetal.problems.Water.UPPERLIMIT;
 import jmetal.util.JMException;
+import plugins.KrigingPoint;
+import whitebox.geospatialfiles.WhiteboxRaster;
+
 
 public class SensorOptimizerProblem extends Problem{
     // defining the lower and upper limits
+  public static  WhiteboxRaster Image;
   public static final double [] LOWERLIMIT = {587993, 5474193};
   public static final double [] UPPERLIMIT = {601703, 5546399};           
-    public void test(){
-        Kriging k = new Kriging();
-    }
    /**
   * Constructor.
   * Creates a default instance of the Water problem.
   * @param solutionType The solution type must "Real" or "BinaryReal".
   */
-  public SensorOptimizerProblem(String solutionType, int NV) {
+  public SensorOptimizerProblem(String solutionType, int NV, WhiteboxRaster img) {
+    Image = img;
+    //reads all the target data
+    double[][] targetData = new double[img.getNumberRows()][img.getNumberColumns()]; 
+      for (int r = 0; r < img.getNumberRows(); r++) {
+          targetData[r]= img.getRowValues(r);
+      }
+    /////////////////
+      
+      
     numberOfVariables_   = NV *2 ;
     numberOfObjectives_  = 2 ;
     numberOfConstraints_ = 0 ;
@@ -57,25 +69,62 @@ public class SensorOptimizerProblem extends Problem{
     	System.exit(-1) ;
     }  
  } // Roshani
+  
 	         /**
    * Evaluates a solution
    * @param solution The solution to evaluate
    * @throws JMException 
    */
-  public void evaluate(Solution solution) throws JMException {         
-    double [] x = new double[2] ; // 3 decision variables
+  @Override
+  public void evaluate(Solution solution) throws JMException {  
+      List<KrigingPoint> pnts = new ArrayList<>();
+      
+      for (int i = 0; i < solution.getDecisionVariables().length; i=i+2) {
+          double z = Image.getValue(Image.getRowFromYCoordinate(solution.getDecisionVariables()[i+1].getValue()), 
+                  Image.getColumnFromXCoordinate(solution.getDecisionVariables()[i].getValue()));
+          KrigingPoint pp = new KrigingPoint(solution.getDecisionVariables()[i].getValue()
+                  , solution.getDecisionVariables()[i+1].getValue(), z);
+          pnts.add(pp);
+      }
+      
+      Kriging k = new Kriging();
+      
+      
+      k.Points = pnts;
+      k.ConsiderNugget = false;
+      k.LagSize = 2000;
+      k.Anisotropic = false;
+      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false);
+      k.resolution = 914;
+      k.BMinX = 588907;
+      k.BMaxX = 600789;
+      k.BMinY = 5475107;
+      k.BMaxY = 5545485;
+
+      List<KrigingPoint> outPnts = k.calcInterpolationPoints();
+      outPnts = k.InterpolatePoints(var, outPnts, 5);
+      //k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts);
+      
+      double dif = 0;
+      for (int i = 0; i < outPnts.size(); i++) {
+          int r = ((i+1)-((i+1)%Image.getNumberColumns()))/ Image.getNumberColumns();
+          int c = (i%Image.getNumberColumns());
+          
+          dif += Math.abs(outPnts.get(i).z-Image.getValue(r, c));
+      }
+      
+      
     double [] f = new double[2] ; // 5 functions
-    x[0] = solution.getDecisionVariables()[0].getValue();
-    x[1] = solution.getDecisionVariables()[1].getValue();
 
     
     // First function
-    f[0] = 106780.37 * (x[0] + x[1]) + 61704.67 ;
+    f[0] = dif ;
     // Second function
-    f[1] = 3000 * x[0] ;
+    f[1] = dif ;
              
     solution.setObjective(0,f[0]);    
     solution.setObjective(1,f[1]);
+    System.out.println(dif);
   } // evaluate
 
   /** 

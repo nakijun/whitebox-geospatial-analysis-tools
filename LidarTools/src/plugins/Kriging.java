@@ -110,20 +110,20 @@ public class Kriging {
     //public double[][] Points;       //Array of points location x=0, y = 1, z = 2
     public double MaximumDistance;
     public bin[][] BinSurface;       //n*3 matrix to store all the binnes
-    public class point
-    {
-        double x;
-        double y;
-        double z;
-    }
-    public point point(double x , double y, double z){
-        point p = new point();
-        p.x = x;
-        p.y = y;
-        p.z = z;
-        return p;
-    }
-    public List<point> Points = new ArrayList();
+//    public class point
+//    {
+//        public double x;
+//        public double y;
+//        public double z;
+//    }
+//    public point point(double x , double y, double z){
+//        point p = new point();
+//        p.x = x;
+//        p.y = y;
+//        p.z = z;
+//        return p;
+//    }
+    public List<KrigingPoint> Points = new ArrayList();
     
     public class pair
     {
@@ -937,7 +937,7 @@ public class Kriging {
      * @param fieldName
      * @return 
      */
-    public List<point> ReadPointFile(String inputFile, String fieldName)
+    public List<KrigingPoint> ReadPointFile(String inputFile, String fieldName)
     {
         int fieldNum = 0;
         WhiteboxRasterBase.DataType dataType = WhiteboxRasterBase.DataType.INTEGER;
@@ -947,6 +947,7 @@ public class Kriging {
         try {
             input = new ShapeFile(inputFile);
         } catch (IOException ex) {
+            System.out.println(ex.getMessage().toString());
             Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
         }
         if (input.getShapeType() != ShapeType.POINT && 
@@ -987,7 +988,7 @@ public class Kriging {
         //////////////////////
         Object[] data = null;
         double[][] geometry;
-        List<point> Points = new ArrayList<point>();
+        List<KrigingPoint> Points = new ArrayList<KrigingPoint>();
         
         for (ShapeFileRecord record : input.records) {
             try {
@@ -997,10 +998,7 @@ public class Kriging {
             }
             geometry = getXYFromShapefileRecord(record);
             for (int i = 0; i < geometry.length; i++) {
-                point p = new point();
-                p.x = geometry[i][0];
-                p.y = geometry[i][1];
-                p.z = Double.valueOf(data[fieldNum].toString());
+                KrigingPoint p = new KrigingPoint(geometry[i][0],geometry[i][1],Double.valueOf(data[fieldNum].toString()));
                 Points.add(p);
             }
         }
@@ -1054,7 +1052,7 @@ public class Kriging {
      * It calculates the location of each grid cell. the resolution should be set before calling this method
      * @return a point list
      */
-    public List<point> calcInterpolationPoints(){
+    public List<KrigingPoint> calcInterpolationPoints(){
         double north, south, east, west;
         int nrows, ncols;
         double northing, easting;
@@ -1065,14 +1063,14 @@ public class Kriging {
         south = north - nrows * resolution;
         east = west + ncols * resolution;
         int row, col;
-        List<point> pnts = new ArrayList();
+        List<KrigingPoint> pnts = new ArrayList();
         // Create the whitebox raster object.
         double halfResolution = resolution / 2;
         for (row = 0; row < nrows; row++) {
             for (col = 0; col < ncols; col++) {
                 easting = (col * resolution) + (west + halfResolution);
                 northing = (north - halfResolution) - (row * resolution);
-                pnts.add(point(easting, northing, 0));
+                pnts.add(new KrigingPoint(easting, northing, 0.0));
             }
         }
         return pnts;
@@ -1083,7 +1081,7 @@ public class Kriging {
      * @param outputRaster
      * @param pnts 
      */
-    public void BuildRaster(String outputRaster, List<point> pnts){
+    public void BuildRaster(String outputRaster, List<KrigingPoint> pnts){
         double north, south, east, west;
         int nrows, ncols;
         double northing, easting;
@@ -1187,13 +1185,13 @@ public class Kriging {
      * @param pnts
      * @return 
      */
-    public List<point> InterpolatePoints(Variogram variogram, List<point> pnts, int NumberOfNearestPoints)
+    public List<KrigingPoint> InterpolatePoints(Variogram variogram, List<KrigingPoint> pnts, int NumberOfNearestPoints)
     {
         
         double[] res = new double[NumberOfNearestPoints];
         double[][] D = new double[NumberOfNearestPoints + 1][1];
         
-        List<point> NNPoitns = new ArrayList();
+        List<KrigingPoint> NNPoitns = new ArrayList();
         
         for (int n = 0; n < pnts.size(); n++) {
             NNPoitns = getNNpoints(this.pointsTree, pnts.get(n), NumberOfNearestPoints);
@@ -1289,16 +1287,16 @@ public class Kriging {
      * @param numPointsToUse
      * @return 
      */
-    private List<point> getNNpoints(KdTree<Double> Tree, point pnt, int numPointsToUse){
+    private List<KrigingPoint> getNNpoints(KdTree<Double> Tree, KrigingPoint pnt, int numPointsToUse){
         double[] entry;
         //double[] outentry;
         entry = new double[]{pnt.y, pnt.x};
         List<KdTree.Entry<Double>> results;
         results = Tree.nearestNeighbor(entry, numPointsToUse, false);
-        List<point> pnts = new ArrayList();
-        List<point> res = new ArrayList();
+        List<KrigingPoint> pnts = new ArrayList();
+        List<KrigingPoint> res = new ArrayList();
         for (int i = 0; i < results.size(); i++) {
-            point tmp = new point();
+            //KrigingPoint tmp = new KrigingPoint();
             //int id = results.get(i).value.intValue();
             res.add(Points.get(results.get(i).value.intValue()));
         }
@@ -1313,7 +1311,7 @@ public class Kriging {
      * @param NNPoints is the list of nearest neighbor points
      * @return 
      */
-    private double[] CalcVariableCoef(Variogram variogram, point p, List<point> NNPoints){
+    private double[] CalcVariableCoef(Variogram variogram, KrigingPoint p, List<KrigingPoint> NNPoints){
         int n = NNPoints.size();
         double[] mat = new double[n+1];
         double dist = 0.0;
@@ -1330,7 +1328,7 @@ public class Kriging {
      * @param variogarm
      * @return 
      */
-    private double[][] CalcConstantCoef(Variogram variogarm, List<point> NNPoints ){
+    private double[][] CalcConstantCoef(Variogram variogarm, List<KrigingPoint> NNPoints ){
         int n = NNPoints.size();
         double[][] mat = new double[n+1][n+1];
         double dist = 0.0;
@@ -1716,9 +1714,9 @@ public class Kriging {
      * @param n
      * @return 
      */
-    public List<point> RandomizePoints(List<point> pnts , int n){
+    public List<KrigingPoint> RandomizePoints(List<KrigingPoint> pnts , int n){
         Random rnd = new Random();
-        List<point> res = new ArrayList();
+        List<KrigingPoint> res = new ArrayList();
         double drnd =0.0;
         for (int i = 0; i < n; i++) {
             res.add(pnts.get(rnd.nextInt(pnts.size())));
@@ -1740,7 +1738,7 @@ public class Kriging {
             k.Points = k.RandomizePoints(k.Points, 200);
             Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 1, 25,false);
             k.resolution = 900;
-            List<point> pnts = k.calcInterpolationPoints();
+            List<KrigingPoint> pnts = k.calcInterpolationPoints();
             pnts = k.InterpolatePoints(var, pnts, 5);
             k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100"+ i +".dep", pnts);
         }

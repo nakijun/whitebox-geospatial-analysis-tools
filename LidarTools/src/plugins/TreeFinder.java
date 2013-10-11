@@ -146,6 +146,7 @@ public class TreeFinder {
         for (int r = 0; r < rows; r++) {
             value[r]=image.getRowValues(r);
         }
+        
         //Search();
     }
     
