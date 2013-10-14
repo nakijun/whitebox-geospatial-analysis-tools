@@ -8,8 +8,11 @@ package plugins;
  *
  * @author Dr. Ehsan Roshani
  */
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import plugins.Kriging;
 import jmetal.core.Problem;
 import jmetal.core.Solution;
@@ -20,6 +23,7 @@ import static jmetal.problems.Water.UPPERLIMIT;
 import jmetal.util.JMException;
 import plugins.KrigingPoint;
 import whitebox.geospatialfiles.WhiteboxRaster;
+import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 
 
 public class SensorOptimizerProblem extends Problem{
@@ -27,6 +31,8 @@ public class SensorOptimizerProblem extends Problem{
   public static  WhiteboxRaster Image;
   public static final double [] LOWERLIMIT = {587993, 5474193};
   public static final double [] UPPERLIMIT = {601703, 5546399};           
+  double difMin = 100000000;
+  
    /**
   * Constructor.
   * Creates a default instance of the Water problem.
@@ -115,7 +121,19 @@ public class SensorOptimizerProblem extends Problem{
       
       
     double [] f = new double[2] ; // 5 functions
-
+    
+    
+      if (difMin>= dif) {
+          difMin = dif;
+          k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts);
+          try {
+              k.DrawShapeFile("G:\\Optimized Sensory Network\\PALS\\20120607\\test.shp", pnts);
+          } catch (DBFException ex) {
+              Logger.getLogger(SensorOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
+          } catch (IOException ex) {
+              Logger.getLogger(SensorOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
+          }
+      }
     
     // First function
     f[0] = dif ;

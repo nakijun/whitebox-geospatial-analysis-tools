@@ -70,6 +70,7 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.structures.KdTree;
 import whitebox.structures.KdTree.Entry;
 import java.util.Random;
+import whitebox.geospatialfiles.shapefile.attributes.DBFWriter;
 
         
 /**
@@ -165,7 +166,7 @@ public class Kriging {
     
     private int nthSVariogram;      //this is the nth SV for Anisotropic
     
-   
+
     
     public class Variogram{
         public double Range;
@@ -173,8 +174,55 @@ public class Kriging {
         public double Nugget;
         public SemiVariogramType Type;
     }
-    
-    
+
+    public void DrawShapeFile(String outputFile, List<KrigingPoint> pnts) throws DBFException, IOException{
+                
+                File file = new File(outputFile);
+                if (file.exists()) {
+                    file.delete();
+                }
+
+                // set up the output files of the shapefile and the dbf
+                ShapeFile output = new ShapeFile(outputFile, ShapeType.POINT);
+
+                DBFField fields[] = new DBFField[2];
+
+                fields[0] = new DBFField();
+                fields[0].setName("FID");
+                fields[0].setDataType(DBFField.DBFDataType.NUMERIC);
+                fields[0].setFieldLength(10);
+                fields[0].setDecimalCount(0);
+
+                fields[1] = new DBFField();
+                fields[1].setName("Z");
+                fields[1].setDataType(DBFField.DBFDataType.NUMERIC);
+                fields[1].setFieldLength(10);
+                fields[1].setDecimalCount(3);
+                
+                String DBFName = output.getDatabaseFile();
+                
+                DBFWriter writer = new DBFWriter(new File(DBFName)); 
+                writer.setFields(fields);
+                int numPointsInFile = pnts.size();
+                double x,y,z;
+                for (int a = 0; a < numPointsInFile; a++) {
+                        x = pnts.get(a).x;
+                        y = pnts.get(a).y;
+                        z = pnts.get(a).z;
+                        
+                        whitebox.geospatialfiles.shapefile.Point wbGeometry = new 
+                                whitebox.geospatialfiles.shapefile.Point(x, y);
+                        output.addRecord(wbGeometry);
+                        
+                        Object[] rowData = new Object[2];
+                        rowData[0] = new Double(a + 1);
+                        rowData[1] = new Double(z);
+                        writer.addRecord(rowData);
+                }
+                output.write();
+                writer.write();
+    }
+
     
     /**
      * Calculates the bin values based on sector classification and for isotropic model
