@@ -3,12 +3,6 @@
  * and open the template in the editor.
  */
 package plugins;
-
-/**
- *
- * @author Ehsan.Roshani
- */
-
 import jmetal.core.Algorithm;
 import jmetal.core.Operator;
 import jmetal.core.Problem;
@@ -26,33 +20,24 @@ import java.util.HashMap;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import jmetal.metaheuristics.nsgaII.NSGAII;
-import static jmetal.metaheuristics.nsgaII.NSGAII_main.fileHandler_;
-import static jmetal.metaheuristics.nsgaII.NSGAII_main.logger_;
+//import static jmetal.metaheuristics.nsgaII.NSGAII_main.fileHandler_;
+//import static jmetal.metaheuristics.nsgaII.NSGAII_main.logger_;
 import jmetal.problems.Roshani;
+import static plugins.SensorOptimizer.fileHandler_;
+import static plugins.SensorOptimizer.logger_;
 import whitebox.geospatialfiles.WhiteboxRaster;
 
+/**
+ *
+ * @author Ehsan.Roshani
+ */
 
 
-public class SensorOptimizer {
+
+public class KrigingOptimizer {
     public static Logger      logger_ ;      // Logger object
     public static FileHandler fileHandler_ ; // FileHandler object
   
-    public WhiteboxRaster OpenTargetRaster (String inputRaster){
-        WhiteboxRaster image;
-        image = new WhiteboxRaster(inputRaster, "r");
-        
-        int rows = image.getNumberRows();
-        int cols = image.getNumberColumns();
-        double rowSize = image.getCellSizeY();
-        double colSize = image.getCellSizeX();
-        double[][] value;
-        value = new double[rows][cols];
-        for (int r = 0; r < rows; r++) {
-            value[r]=image.getRowValues(r);
-        }
-        return image;
-    }
-
     
      public static void main(String [] args) throws 
                                   JMException, 
@@ -61,7 +46,7 @@ public class SensorOptimizer {
                                   ClassNotFoundException {
          
      SensorOptimizer so = new SensorOptimizer();
-     WhiteboxRaster img = so.OpenTargetRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\20120607flt.dep");
+     //WhiteboxRaster img = so.OpenTargetRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\20120607flt.dep");
     Problem   problem   ; // The problem to solve
     Algorithm algorithm ; // The algorithm to use
     Operator  crossover ; // Crossover operator
@@ -88,22 +73,17 @@ public class SensorOptimizer {
       indicators = new QualityIndicator(problem, args[1]) ;
     } // if
     else { // Default problem
-        problem = new SensorOptimizerProblem("Real", 10, img);
-      //problem = new Roshani("Real");
-      //problem = new Kursawe("BinaryReal", 3);
-      //problem = new Water("Real");
-      //problem = new ZDT1("ArrayReal", 100);
-      //problem = new ConstrEx("Real");
-      //problem = new DTLZ1("Real");
-      //problem = new OKA2("Real") ;
+        problem = new KrigingOptimizerProblem("Real", 4, 
+                "G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp");
+        //problem = new SensorOptimizerProblem("Real", 10, img);
     } // else
     
     algorithm = new NSGAII(problem);
     //algorithm = new ssNSGAII(problem);
 
     // Algorithm parameters
-    algorithm.setInputParameter("populationSize",200);
-    algorithm.setInputParameter("maxEvaluations",400000);
+    algorithm.setInputParameter("populationSize",20);
+    algorithm.setInputParameter("maxEvaluations",4000);
 
     // Mutation and Crossover for Real codification 
     parameters = new HashMap() ;
@@ -152,4 +132,5 @@ public class SensorOptimizer {
       logger_.info("Speed      : " + evaluations + " evaluations") ;      
     } // if
   } //main
+    
 }

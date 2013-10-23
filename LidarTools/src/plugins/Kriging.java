@@ -164,7 +164,7 @@ public class Kriging {
     public boolean ConsiderNugget;  //If nugget should be considered or not
     public SemiVariogramType SVType;
     
-    private int nthSVariogram;      //this is the nth SV for Anisotropic
+    private int nthSVariogram;    //this is the nth SV for Anisotropic
     
 
     
@@ -1415,6 +1415,19 @@ public class Kriging {
     }
     
     /**
+     * This just to use when the semivariogram model is provided by the user. (Kriging Optimizer)
+     */
+    void BuildPointTree(){
+        pointsTree = new KdTree.SqrEuclid<Double>(2, new Integer(this.Points.size()));
+        double[] entry;
+        for (int i = 0; i < this.Points.size(); i++) {
+            entry = new double[]{this.Points.get(i).y, this.Points.get(i).x};
+            pointsTree.addPoint(entry, (double)i);
+        }
+    }
+    
+    
+    /**
      * Creates the pairs list based on sector classification. calcs the distance and moment of inertia for each pair
      * It also calculates the min and max points and boundary
      * It also build the KDTree object to be used with the Kriging
@@ -1754,6 +1767,17 @@ public class Kriging {
         }
         return TheoryVariogram(Type,n);
     }
+    
+    public Variogram SemiVariogram(SemiVariogramType Type, double Range, double Sill, double Nugget,
+            boolean Anisotropic){
+        Variogram var = new Variogram();
+        var.Type = Type;
+        var.Range = Range;
+        var.Sill = Sill;
+        var.Nugget = Nugget;
+        return var;
+    }
+    
     /**
      * Randomly selects the n points from the entered point list
      * This is not a necessary method to use but with large point list (More than 1000 points)

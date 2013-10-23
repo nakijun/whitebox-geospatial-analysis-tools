@@ -1,13 +1,9 @@
 /*
- * This is the optimization problem to find the best location for the soil moisture sensors
- * to calibrate SMAP
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
  */
 package plugins;
 
-/**
- *
- * @author Dr. Ehsan Roshani
- */
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,53 +14,63 @@ import jmetal.core.Problem;
 import jmetal.core.Solution;
 import jmetal.encodings.solutionType.BinaryRealSolutionType;
 import jmetal.encodings.solutionType.RealSolutionType;
-import static jmetal.problems.Water.LOWERLIMIT;
-import static jmetal.problems.Water.UPPERLIMIT;
+//import static jmetal.problems.Water.LOWERLIMIT;
+//import static jmetal.problems.Water.UPPERLIMIT;
 import jmetal.util.JMException;
 import plugins.KrigingPoint;
+import static plugins.SensorOptimizerProblem.Image;
+import static plugins.SensorOptimizerProblem.LOWERLIMIT;
+import static plugins.SensorOptimizerProblem.UPPERLIMIT;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
-
-
-public class SensorOptimizerProblem extends Problem{
-    // defining the lower and upper limits
-  public static  WhiteboxRaster Image;
-  public static final double [] LOWERLIMIT = {587993, 5474193};
-  public static final double [] UPPERLIMIT = {601703, 5546399};           
+/**
+ *
+ * @author Ehsan.Roshani
+ */
+public class KrigingOptimizerProblem extends Problem{
+      // defining the lower and upper limits
+  List<KrigingPoint> pnts = new ArrayList<>();                                     
+                                           //{SV Type, Range, Sill, Nugget}   
+  public static final double [] LOWERLIMIT = {0, 1    , 200 , 0 };
+  public static final double [] UPPERLIMIT = {2, 70000, 1000, 200};           
   double difMin = 100000000;
-  
+   public class Variogram{
+        public double Range;
+        public double Sill;
+        public double Nugget;
+        public Kriging.SemiVariogramType Type;
+    }
    /**
   * Constructor.
   * Creates a default instance of the Water problem.
   * @param solutionType The solution type must "Real" or "BinaryReal".
   */
-  public SensorOptimizerProblem(String solutionType, int NV, WhiteboxRaster img) {
-    Image = img;
-    //reads all the target data
-    double[][] targetData = new double[img.getNumberRows()][img.getNumberColumns()]; 
-      for (int r = 0; r < img.getNumberRows(); r++) {
-          targetData[r]= img.getRowValues(r);
-      }
-    /////////////////
-      
-      
-    numberOfVariables_   = NV *2 ;
+  public KrigingOptimizerProblem(String solutionType, int NV, String PointShapeFile) {
+    
+    Kriging k = new Kriging();
+    pnts = k.ReadPointFile(PointShapeFile, "Z");
+//    pnts = k.RandomizePoints(pnts, 100);
+//      try {
+//          k.DrawShapeFile("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp", pnts);
+//      } catch (DBFException ex) {
+//          Logger.getLogger(KrigingOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
+//      } catch (IOException ex) {
+//          Logger.getLogger(KrigingOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
+//      }
+//    
+    numberOfVariables_   = 4 ;
     numberOfObjectives_  = 2 ;
     numberOfConstraints_ = 0 ;
-    problemName_         = "SensorOptimizer";
+    problemName_         = "KrigingOptimizer";
 	        
     upperLimit_ = new double[numberOfVariables_];
     lowerLimit_ = new double[numberOfVariables_];
     upperLimit_ = new double[numberOfVariables_];
     lowerLimit_ = new double[numberOfVariables_];
-    for (int var = 0; var < numberOfVariables_; var=var+2){
-      lowerLimit_[var] = LOWERLIMIT[0];
-      upperLimit_[var] = UPPERLIMIT[0];
-
-      lowerLimit_[var+1] = LOWERLIMIT[1];
-      upperLimit_[var+1] = UPPERLIMIT[1];
-
-    } // for
+    for (int var = 0; var < numberOfVariables_; var++){
+      lowerLimit_[var] = LOWERLIMIT[var];
+      upperLimit_[var] = UPPERLIMIT[var];
+    } 
 	        
     if (solutionType.compareTo("BinaryReal") == 0)
       solutionType_ = new BinaryRealSolutionType(this) ;
@@ -83,32 +89,40 @@ public class SensorOptimizerProblem extends Problem{
    */
   @Override
   public void evaluate(Solution solution) throws JMException {  
-      List<KrigingPoint> pnts = new ArrayList<>();
       
-      for (int i = 0; i < solution.getDecisionVariables().length; i=i+2) {
-          double z = Image.getValue(Image.getRowFromYCoordinate(solution.getDecisionVariables()[i+1].getValue()), 
-                  Image.getColumnFromXCoordinate(solution.getDecisionVariables()[i].getValue()));
-          KrigingPoint pp = new KrigingPoint(solution.getDecisionVariables()[i].getValue()
-                  , solution.getDecisionVariables()[i+1].getValue(), z);
-          pnts.add(pp);
-      }
+      
+//      for (int i = 0; i < solution.getDecisionVariables().length; i=i+2) {
+//          double z = Image.getValue(Image.getRowFromYCoordinate(solution.getDecisionVariables()[i+1].getValue()), 
+//                  Image.getColumnFromXCoordinate(solution.getDecisionVariables()[i].getValue()));
+//          KrigingPoint pp = new KrigingPoint(solution.getDecisionVariables()[i].getValue()
+//                  , solution.getDecisionVariables()[i+1].getValue(), z);
+//          pnts.add(pp);
+//      }
       
       Kriging k = new Kriging();
       
       
       k.Points = pnts;
-      k.ConsiderNugget = false;
-      k.LagSize = 2000;
+      k.ConsiderNugget = true;
+      //k.LagSize = 2000;
       k.Anisotropic = false;
-      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false);
+      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,
+              solution.getDecisionVariables()[1].getValue(),solution.getDecisionVariables()[2].getValue(),
+              solution.getDecisionVariables()[3].getValue(),false);
+      
+      
+      
       k.resolution = 914;
       k.BMinX = 588907;
       k.BMaxX = 600789;
       k.BMinY = 5475107;
       k.BMaxY = 5545485;
 
-      List<KrigingPoint> outPnts = k.calcInterpolationPoints();
-      outPnts = k.InterpolatePoints(var, outPnts, 5);
+      List<KrigingPoint> outPnts ;//= k.calcInterpolationPoints();
+      
+      
+      k.BuildPointTree();
+      outPnts = k.InterpolatePoints(var, pnts, 5);
       //k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts);
       
       double dif = 0;
@@ -145,31 +159,4 @@ public class SensorOptimizerProblem extends Problem{
     System.out.println(dif);
   } // evaluate
 
-  /** 
-   * NOT USED Evaluates the constraint overhead of a solution 
-   * @param solution The solution
-   * @throws JMException 
-   */  
-  public void evaluateConstraints(Solution solution) throws JMException {
-    double [] constraint = new double[1]; // 7 constraints
-    double [] x          = new double[2]; // 3 objectives
-        
-    x[0] = solution.getDecisionVariables()[0].getValue();
-    x[1] = solution.getDecisionVariables()[1].getValue();
- 
-    constraint[0] = 1 - (0.00139/(x[0]*x[1])+4.94*x[1]-0.08)             ;
-    
-    double total = 0.0;
-    int number = 0;
-    for (int i = 0; i < numberOfConstraints_; i++) {
-      if (constraint[i]<0.0){
-        total+=constraint[i];
-        number++;
-      } // int
-    } // for
-        
-    solution.setOverallConstraintViolation(total);    
-    solution.setNumberOfViolatedConstraint(number);        
-  } // evaluateConstraints   
-    
 }
