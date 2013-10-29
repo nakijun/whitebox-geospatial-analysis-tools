@@ -83,7 +83,7 @@ public class KrigingOptimizer {
 
     // Algorithm parameters
     algorithm.setInputParameter("populationSize",20);
-    algorithm.setInputParameter("maxEvaluations",4000);
+    algorithm.setInputParameter("maxEvaluations",5000);
 
     // Mutation and Crossover for Real codification 
     parameters = new HashMap() ;

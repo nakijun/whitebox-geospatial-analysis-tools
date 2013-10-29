@@ -1228,21 +1228,31 @@ public class Kriging {
     }
     
     /**
-     * Gets the variogram and unknown point list and returns the interpolated values for the unknown points
+     * Gets the variogram and unknown point list and returns the interpolated values for the known points
+     * This is to calculate the predicted value for each known point, the result would be used for cross validation.
      * @param variogram
      * @param pnts
      * @return 
      */
-    public List<KrigingPoint> InterpolatePoints(Variogram variogram, List<KrigingPoint> pnts, int NumberOfNearestPoints)
+    public List<KrigingPoint> CrossValidationPoints(Variogram variogram, List<KrigingPoint> pnts, int NumberOfNearestPoints)
     {
         
         double[] res = new double[NumberOfNearestPoints];
         double[][] D = new double[NumberOfNearestPoints + 1][1];
         
-        List<KrigingPoint> NNPoitns = new ArrayList();
         
+        List<KrigingPoint> NNPoitns = new ArrayList();
+        List<KrigingPoint> outPnts = new ArrayList();
         for (int n = 0; n < pnts.size(); n++) {
-            NNPoitns = getNNpoints(this.pointsTree, pnts.get(n), NumberOfNearestPoints);
+            NNPoitns = getNNpoints(this.pointsTree, pnts.get(n), NumberOfNearestPoints+1);
+            for (int ni = 0; ni < NumberOfNearestPoints+1; ni++) {
+                if (pnts.get(n).x == NNPoitns.get(ni).x &&
+                        pnts.get(n).y == NNPoitns.get(ni).y &&
+                        pnts.get(n).z == NNPoitns.get(ni).z) {
+                    NNPoitns.remove(ni);
+                    break;
+                }
+            }
 
             double[][] C = CalcConstantCoef(variogram, NNPoitns);
             double[] tm =  CalcVariableCoef(variogram, pnts.get(n),NNPoitns); ///------------
@@ -1261,7 +1271,9 @@ public class Kriging {
                 for (int i = 0; i < Wi.length-1; i++) {
                     s = s + Wi[i][0]*NNPoitns.get(i).z;
                 }
-                pnts.get(n).z = s;
+                KrigingPoint pnt = new KrigingPoint(pnts.get(n).x, pnts.get(n).y, s);
+                outPnts.add(pnt);
+                //pnts.get(n).z = s;
                 //res[n]=s;
                 s = 0;
 
@@ -1292,12 +1304,96 @@ public class Kriging {
                 for (int i = 0; i < Wi.length-1; i++) {
                     ss = ss + Wi[i][0]*NNPoitns.get(i).z;
                 }
-                pnts.get(n).z = ss;
+                KrigingPoint pnt = new KrigingPoint(pnts.get(n).x+1, pnts.get(n).y, ss);
+                outPnts.add(pnt);
+
+                //pnts.get(n).z = ss;
                 ss=0;                
             }
         }
         
-        return pnts;
+        return outPnts;
+    }
+    
+    
+    
+    /**
+     * Gets the variogram and unknown point list and returns the interpolated values for the unknown points
+     * @param variogram
+     * @param pnts
+     * @return 
+     */
+    public List<KrigingPoint> InterpolatePoints(Variogram variogram, List<KrigingPoint> pnts, int NumberOfNearestPoints)
+    {
+        
+        double[] res = new double[NumberOfNearestPoints];
+        double[][] D = new double[NumberOfNearestPoints + 1][1];
+        
+        
+        List<KrigingPoint> NNPoitns = new ArrayList();
+        List<KrigingPoint> outPnts = new ArrayList();
+        for (int n = 0; n < pnts.size(); n++) {
+            NNPoitns = getNNpoints(this.pointsTree, pnts.get(n), NumberOfNearestPoints);
+
+            double[][] C = CalcConstantCoef(variogram, NNPoitns);
+            double[] tm =  CalcVariableCoef(variogram, pnts.get(n),NNPoitns); ///------------
+            for (int i = 0; i < tm.length; i++) {
+                D[i][0]=tm[i];
+            }
+            //double[][] d = {{1,2,3},{4,5,6,},{7,8,10}};
+            Matrix tmp = Matrix.constructWithCopy(C);
+            Matrix VariableCoef = Matrix.constructWithCopy(D);
+            Matrix w = null;
+            boolean flag = false;
+            try{
+                w = tmp.solve(VariableCoef);
+                double[][] Wi =  w.getArray();
+                double s = 0;
+                for (int i = 0; i < Wi.length-1; i++) {
+                    s = s + Wi[i][0]*NNPoitns.get(i).z;
+                }
+                KrigingPoint pnt = new KrigingPoint(pnts.get(n).x, pnts.get(n).y, s);
+                outPnts.add(pnt);
+                //pnts.get(n).z = s;
+                //res[n]=s;
+                s = 0;
+
+            }catch(Exception ex){
+                SingularValueDecomposition svd = tmp.svd();
+                Matrix u = svd.getU();
+                Matrix s = svd.getS();
+                Matrix v = svd.getV();
+                //u.print(u.getRowDimension(), u.getColumnDimension());
+                //s.print(s.getRowDimension(), s.getColumnDimension());
+                //v.print(v.getRowDimension(), v.getColumnDimension());
+                
+                int rrr = svd.rank();
+                double[][] stemp = s.getArray();
+                for (int nn = 0; nn < stemp.length; nn++) {
+                    if (stemp[nn][nn]>0.03) {
+                        stemp[nn][nn]=1/stemp[nn][nn];
+                    }
+                    else{
+                        stemp[nn][nn]=0;
+                    }
+                }
+                Matrix sp = new Matrix(stemp);
+                w = v.times(sp).times(u.transpose()).times(VariableCoef);
+                //Matrix test = tmp.times(w).minus(VariableCoef);
+                double[][] Wi =  w.getArray();
+                double ss = 0;
+                for (int i = 0; i < Wi.length-1; i++) {
+                    ss = ss + Wi[i][0]*NNPoitns.get(i).z;
+                }
+                KrigingPoint pnt = new KrigingPoint(pnts.get(n).x+1, pnts.get(n).y, ss);
+                outPnts.add(pnt);
+
+                //pnts.get(n).z = ss;
+                ss=0;                
+            }
+        }
+        
+        return outPnts;
     }
     
     
@@ -1424,6 +1520,7 @@ public class Kriging {
             entry = new double[]{this.Points.get(i).y, this.Points.get(i).x};
             pointsTree.addPoint(entry, (double)i);
         }
+        
     }
     
     
@@ -1800,20 +1897,43 @@ public class Kriging {
         //ChartPanel(createChart(createDataset()));
         Kriging k = new Kriging();
         k.ConsiderNugget = false;
-        k.LagSize = 2500;
+        k.Points  =  k.ReadPointFile(
+                "G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp","Z");
+        k.LagSize = 502.3;
         k.Anisotropic = false;
-//        k.Angle = Math.PI*3/4;
-//        k.Tolerance = Math.PI/4;
-//        k.BandWidth = 3*k.LagSize;
-        for (int i = 0; i < 50; i++) {
-            k.Points  =  k.ReadPointFile("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100.shp","h");
-            k.Points = k.RandomizePoints(k.Points, 200);
-            Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 1, 25,false);
-            k.resolution = 900;
-            List<KrigingPoint> pnts = k.calcInterpolationPoints();
-            pnts = k.InterpolatePoints(var, pnts, 5);
-            k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100"+ i +".dep", pnts);
-        }
+        Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 0.27, 100,false);
+        
+        var.Range = 4160.672768;
+        var.Sill = 1835.571948;
+        
+        k.resolution=914;
+        k.BMinX = 588907;
+        k.BMaxX = 600789;
+        k.BMinY = 5475107;
+        k.BMaxY = 5545485;
+        List<KrigingPoint> outPnts = k.calcInterpolationPoints() ;
+        outPnts = k.InterpolatePoints(var, outPnts, 5);
+        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.dep", outPnts);
+
+        //k.DrawSemiVariogram(k.Binnes, var);
+        //k.calcBinSurface(SemiVariogramType.Spherical,  1, 99,false);
+        //k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags), false);
+        
+        
+//        k.LagSize = 2500;
+//        k.Anisotropic = false;
+////        k.Angle = Math.PI*3/4;
+////        k.Tolerance = Math.PI/4;
+////        k.BandWidth = 3*k.LagSize;
+//        for (int i = 0; i < 50; i++) {
+//            k.Points  =  k.ReadPointFile("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100.shp","h");
+//            k.Points = k.RandomizePoints(k.Points, 200);
+//            Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 1, 25,false);
+//            k.resolution = 900;
+//            List<KrigingPoint> pnts = k.calcInterpolationPoints();
+//            pnts = k.InterpolatePoints(var, pnts, 5);
+//            k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\Pals Shapefiles\\PALS_TA_20120607_HiAlt_v100"+ i +".dep", pnts);
+//        }
         
         //k.DrawSemiVariogram(k.Binnes, var);
         //k.calcBinSurface(SemiVariogramType.Spherical,  0.27, 25,false);

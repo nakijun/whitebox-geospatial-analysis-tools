@@ -31,8 +31,8 @@ public class KrigingOptimizerProblem extends Problem{
       // defining the lower and upper limits
   List<KrigingPoint> pnts = new ArrayList<>();                                     
                                            //{SV Type, Range, Sill, Nugget}   
-  public static final double [] LOWERLIMIT = {0, 1    , 200 , 0 };
-  public static final double [] UPPERLIMIT = {2, 70000, 1000, 200};           
+  public static final double [] LOWERLIMIT = {0, 1    , 10 , 0 };
+  public static final double [] UPPERLIMIT = {2, 100000, 5000, 10};           
   double difMin = 100000000;
    public class Variogram{
         public double Range;
@@ -106,48 +106,47 @@ public class KrigingOptimizerProblem extends Problem{
       k.ConsiderNugget = true;
       //k.LagSize = 2000;
       k.Anisotropic = false;
+              
       Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,
               solution.getDecisionVariables()[1].getValue(),solution.getDecisionVariables()[2].getValue(),
               solution.getDecisionVariables()[3].getValue(),false);
       
       
       
-      k.resolution = 914;
+      //k.resolution = 914;
       k.BMinX = 588907;
       k.BMaxX = 600789;
       k.BMinY = 5475107;
       k.BMaxY = 5545485;
 
-      List<KrigingPoint> outPnts ;//= k.calcInterpolationPoints();
-      
+      List<KrigingPoint> outPnts; //= k.calcInterpolationPoints();
       
       k.BuildPointTree();
-      outPnts = k.InterpolatePoints(var, pnts, 5);
+      
+      outPnts = k.CrossValidationPoints(var, pnts, 5);
+      
       //k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts);
       
       double dif = 0;
       for (int i = 0; i < outPnts.size(); i++) {
-          int r = ((i+1)-((i+1)%Image.getNumberColumns()))/ Image.getNumberColumns();
-          int c = (i%Image.getNumberColumns());
-          
-          dif += Math.abs(outPnts.get(i).z-Image.getValue(r, c));
+          dif += Math.abs(outPnts.get(i).z-pnts.get(i).z);
       }
       
       
     double [] f = new double[2] ; // 5 functions
     
     
-      if (difMin>= dif) {
-          difMin = dif;
-          k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts);
-          try {
-              k.DrawShapeFile("G:\\Optimized Sensory Network\\PALS\\20120607\\test.shp", pnts);
-          } catch (DBFException ex) {
-              Logger.getLogger(SensorOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
-          } catch (IOException ex) {
-              Logger.getLogger(SensorOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
-          }
-      }
+//      if (difMin>= dif) {
+//          difMin = dif;
+//          k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts);
+//          try {
+//              k.DrawShapeFile("G:\\Optimized Sensory Network\\PALS\\20120607\\test.shp", pnts);
+//          } catch (DBFException ex) {
+//              Logger.getLogger(SensorOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
+//          } catch (IOException ex) {
+//              Logger.getLogger(SensorOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
+//          }
+//      }
     
     // First function
     f[0] = dif ;
@@ -156,7 +155,7 @@ public class KrigingOptimizerProblem extends Problem{
              
     solution.setObjective(0,f[0]);    
     solution.setObjective(1,f[1]);
-    System.out.println(dif);
+    System.out.println(dif + " " + var.Nugget + " " + var.Range+ " " +var.Sill );
   } // evaluate
 
 }
