@@ -12,6 +12,8 @@ public class KrigingPoint {
     public double x;
     public double y;
     public double z;
+    public double v;    //Kriging Variance Eq 12.20 P 290
+            
     
     
     

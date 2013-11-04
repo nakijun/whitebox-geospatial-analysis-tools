@@ -27,15 +27,12 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFException;
  *
  * @author Ehsan.Roshani
  */
-public class KrigingOptimizerProblem extends Problem{
+public class KrigingLagOptimizerProblem extends Problem{
       // defining the lower and upper limits
   List<KrigingPoint> pnts = new ArrayList<>();                                     
-                                           //{SV Type, Range, Sill, Nugget}   
-  public static final double [] LOWERLIMIT = {0, 1    , 10 , 0 };
-  public static final double [] UPPERLIMIT = {2, 100000, 5000, 10};           
                                             //LagSize, Number of Lags
-//  public static final double [] LOWERLIMIT = {100  , 5   };
-//  public static final double [] UPPERLIMIT = {10000, 1000};           
+  public static final double [] LOWERLIMIT = {100  , 5   };
+  public static final double [] UPPERLIMIT = {10000, 1000};           
   
   double difMin = 100000000;
    public class Variogram{
@@ -49,7 +46,7 @@ public class KrigingOptimizerProblem extends Problem{
   * Creates a default instance of the Water problem.
   * @param solutionType The solution type must "Real" or "BinaryReal".
   */
-  public KrigingOptimizerProblem(String solutionType, int NV, String PointShapeFile) {
+  public KrigingLagOptimizerProblem(String solutionType, int NV, String PointShapeFile) {
     
     Kriging k = new Kriging();
     pnts = k.ReadPointFile(PointShapeFile, "Z");
@@ -62,10 +59,10 @@ public class KrigingOptimizerProblem extends Problem{
 //          Logger.getLogger(KrigingOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
 //      }
 //    
-    numberOfVariables_   = 4 ;
+    numberOfVariables_   = 2 ;
     numberOfObjectives_  = 2 ;
     numberOfConstraints_ = 0 ;
-    problemName_         = "KrigingOptimizer";
+    problemName_         = "KrigingLagOptimizer";
 	        
     upperLimit_ = new double[numberOfVariables_];
     lowerLimit_ = new double[numberOfVariables_];
@@ -110,11 +107,16 @@ public class KrigingOptimizerProblem extends Problem{
       k.ConsiderNugget = true;
       //k.LagSize = 2000;
       k.Anisotropic = false;
-              
-      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,
-              solution.getDecisionVariables()[1].getValue(),solution.getDecisionVariables()[2].getValue(),
-              solution.getDecisionVariables()[3].getValue(),false);
       
+      k.LagSize = solution.getDecisionVariables()[0].getValue();
+      k.NumberOfLags = (int)solution.getDecisionVariables()[1].getValue();
+      
+      
+//      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,
+//              solution.getDecisionVariables()[1].getValue(),solution.getDecisionVariables()[2].getValue(),
+//              solution.getDecisionVariables()[3].getValue(),false);
+      
+      Kriging.Variogram  var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,1 ,k.NumberOfLags,false);
       
       
       //k.resolution = 914;
@@ -159,7 +161,7 @@ public class KrigingOptimizerProblem extends Problem{
              
     solution.setObjective(0,f[0]);    
     solution.setObjective(1,f[1]);
-    System.out.println(dif + " " + var.Nugget + " " + var.Range+ " " +var.Sill );
+    System.out.println(dif + " " + var.Nugget + " " + var.Range+ " " +var.Sill + " " + k.LagSize + " " + k.NumberOfLags );
   } // evaluate
 
 }

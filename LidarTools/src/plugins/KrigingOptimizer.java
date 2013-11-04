@@ -73,10 +73,12 @@ public class KrigingOptimizer {
       indicators = new QualityIndicator(problem, args[1]) ;
     } // if
     else { // Default problem
-        problem = new KrigingOptimizerProblem("Real", 4, 
+        //problem = new KrigingOptimizerProblem("Real", 4, 
+        //        "G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp");
+        problem = new KrigingLagOptimizerProblem("Real", 2, 
                 "G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp");
-        //problem = new SensorOptimizerProblem("Real", 10, img);
-    } // else
+
+    } 
     
     algorithm = new NSGAII(problem);
     //algorithm = new ssNSGAII(problem);

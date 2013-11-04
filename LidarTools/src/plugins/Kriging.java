@@ -804,8 +804,8 @@ public class Kriging {
                 
             public void setValues(double[] parameters, double[] values) {
                 //parameters[0] = sill, parameters[1] Range, parameters[2] nugget    
-                double [] x = new double[Binnes.length];
-                    for (int i = 0; i < Binnes.length; i++) {
+                double [] x = new double[values.length];
+                    for (int i = 0; i < values.length; i++) {
                         x[i]=Binnes[i][ nthSVariogram].Distance;
                     }
                     switch (SVType){
@@ -856,6 +856,22 @@ public class Kriging {
             y[i]=Binnes[i][n].Value;
             //System.out.println(Binnes.get(i).Distance);
         }
+        
+        int nNan = 0;
+        for (int i = y.length-1; i >= 0; i--) {
+            if (Double.isNaN(y[i])) {
+                nNan++;
+            }
+            else{
+                break;
+            }
+        }
+        double [] y2 = new double[y.length-nNan];
+        for (int i = 0; i < y2.length; i++) {
+            y2[i]=y[i];
+        }
+        y = y2;
+        
         double [] iniPar = new double[y.length];
         double [] w = new double[y.length];
         for (int i = 0; i < y.length; i++) {
@@ -863,13 +879,19 @@ public class Kriging {
             w[i]=1;
         }
         double tmp = 0;
+        int tmpN = 0;
         for (int i = 0; i < y.length; i++) {
             if ( !Double.isNaN(y[i])) {
                 tmp += y[i];
+                tmpN++;
+            }
+            else
+            {
+                w[i]=0;
             }
         }
         iniPar[1]=this.LagSize;
-        iniPar[0]=tmp/y.length;
+        iniPar[0]=tmp/tmpN;
         optimizer.setInitialParameters(iniPar);
         optimizer.setWeights(w);
         optimizer.setMaxIteration(100);
@@ -1129,7 +1151,7 @@ public class Kriging {
      * @param outputRaster
      * @param pnts 
      */
-    public void BuildRaster(String outputRaster, List<KrigingPoint> pnts){
+    public void BuildRaster(String outputRaster, List<KrigingPoint> pnts, boolean DrawKrigingVariance){
         double north, south, east, west;
         int nrows, ncols;
         double northing, easting;
@@ -1210,8 +1232,12 @@ public class Kriging {
             for (col = 0; col < ncols; col++) {
                 easting = (col * resolution) + (west + halfResolution);
                 northing = (north - halfResolution) - (row * resolution);
-
-                image.setValue(row, col, pnts.get(nn).z);
+                if (!DrawKrigingVariance) {
+                    image.setValue(row, col, pnts.get(nn).z);
+                }
+                else{
+                    image.setValue(row, col, pnts.get(nn).v);
+                }                
                 nn++;
             }
 //                            if (cancelOp) {
@@ -1319,6 +1345,7 @@ public class Kriging {
     
     /**
      * Gets the variogram and unknown point list and returns the interpolated values for the unknown points
+     * It also calculates the Kriging Variance and sets the KrigingPoint.V
      * @param variogram
      * @param pnts
      * @return 
@@ -1346,13 +1373,16 @@ public class Kriging {
             Matrix w = null;
             boolean flag = false;
             try{
+                double vs = 0;
                 w = tmp.solve(VariableCoef);
                 double[][] Wi =  w.getArray();
                 double s = 0;
                 for (int i = 0; i < Wi.length-1; i++) {
                     s = s + Wi[i][0]*NNPoitns.get(i).z;
+                    vs = vs + Wi[i][0]* D[i][0];
                 }
                 KrigingPoint pnt = new KrigingPoint(pnts.get(n).x, pnts.get(n).y, s);
+                pnt.v = vs + Wi[Wi.length-1][0];
                 outPnts.add(pnt);
                 //pnts.get(n).z = s;
                 //res[n]=s;
@@ -1382,10 +1412,13 @@ public class Kriging {
                 //Matrix test = tmp.times(w).minus(VariableCoef);
                 double[][] Wi =  w.getArray();
                 double ss = 0;
+                double vs = 0;
                 for (int i = 0; i < Wi.length-1; i++) {
                     ss = ss + Wi[i][0]*NNPoitns.get(i).z;
+                    vs = vs + Wi[i][0]* D[i][0];
                 }
                 KrigingPoint pnt = new KrigingPoint(pnts.get(n).x+1, pnts.get(n).y, ss);
+                pnt.v = vs + Wi[Wi.length-1][0];
                 outPnts.add(pnt);
 
                 //pnts.get(n).z = ss;
@@ -1903,8 +1936,8 @@ public class Kriging {
         k.Anisotropic = false;
         Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 0.27, 100,false);
         
-        var.Range = 4160.672768;
-        var.Sill = 1835.571948;
+        //var.Range = 4160.672768;
+        //var.Sill = 1835.571948;
         
         k.resolution=914;
         k.BMinX = 588907;
@@ -1913,7 +1946,8 @@ public class Kriging {
         k.BMaxY = 5545485;
         List<KrigingPoint> outPnts = k.calcInterpolationPoints() ;
         outPnts = k.InterpolatePoints(var, outPnts, 5);
-        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.dep", outPnts);
+        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.dep", outPnts,false);
+        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\PntsVar100.dep", outPnts,true);
 
         //k.DrawSemiVariogram(k.Binnes, var);
         //k.calcBinSurface(SemiVariogramType.Spherical,  1, 99,false);
