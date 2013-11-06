@@ -166,6 +166,8 @@ public class Kriging {
     
     private int nthSVariogram;    //this is the nth SV for Anisotropic
     
+    private double[] x ;// This is the x value for fitting the theoritical SV
+    
 
     
     public class Variogram{
@@ -799,15 +801,16 @@ public class Kriging {
     {
         SVType = semiType;
         nthSVariogram = n;
+        //x = xValue ;
         LevenbergMarquardt optimizer = new LevenbergMarquardt() {
                 // Override your objective function here
                 
             public void setValues(double[] parameters, double[] values) {
                 //parameters[0] = sill, parameters[1] Range, parameters[2] nugget    
-                double [] x = new double[values.length];
-                    for (int i = 0; i < values.length; i++) {
-                        x[i]=Binnes[i][ nthSVariogram].Distance;
-                    }
+//                double [] x = new double[values.length];
+//                    for (int i = 0; i < values.length; i++) {
+//                        x[i]=Binnes[i][ nthSVariogram].Distance;
+//                    }
                     switch (SVType){
                         case Exponential:
                             for (int i = 0; i < x.length; i++) {
@@ -852,23 +855,28 @@ public class Kriging {
         // Set solver parameters
         
         double [] y = new double[Binnes.length];
+        
         for (int i = 0; i < y.length; i++) {
             y[i]=Binnes[i][n].Value;
-            //System.out.println(Binnes.get(i).Distance);
+            
         }
-        
         int nNan = 0;
-        for (int i = y.length-1; i >= 0; i--) {
-            if (Double.isNaN(y[i])) {
+        for (int i = 0; i < y.length; i++) {
+            if (!Double.isNaN(y[i])) {
                 nNan++;
             }
-            else{
-                break;
-            }
         }
-        double [] y2 = new double[y.length-nNan];
-        for (int i = 0; i < y2.length; i++) {
-            y2[i]=y[i];
+        x = new double[nNan];
+        
+        double [] y2 = new double[nNan];
+        int ntmp = 0;
+        for (int i = 0; i < y.length; i++) {
+            if (!Double.isNaN(y[i])) {
+                y2[ntmp]=y[i];
+                x[ntmp] = Binnes[i][nthSVariogram].Distance;
+                ntmp++;
+            }
+            
         }
         y = y2;
         
@@ -895,6 +903,7 @@ public class Kriging {
         optimizer.setInitialParameters(iniPar);
         optimizer.setWeights(w);
         optimizer.setMaxIteration(100);
+        optimizer.setErrorTolerance(0.1);
         optimizer.setTargetValues(y);
         try {
             optimizer.run();
@@ -910,6 +919,10 @@ public class Kriging {
         Variogram var = new Variogram();
         var.Sill = bestParameters[0];
         var.Range=bestParameters[1];
+        
+        if (var.Sill < 0) {
+            var.Sill = 0;
+        }
         var.Nugget =  (ConsiderNugget ? bestParameters[2] : 0 );
         var.Type = semiType;
         return var;
@@ -1383,6 +1396,9 @@ public class Kriging {
                 }
                 KrigingPoint pnt = new KrigingPoint(pnts.get(n).x, pnts.get(n).y, s);
                 pnt.v = vs + Wi[Wi.length-1][0];
+                if (pnt.v<=0) {
+                    pnt.v = pnt.v;
+                }
                 outPnts.add(pnt);
                 //pnts.get(n).z = s;
                 //res[n]=s;
@@ -1400,7 +1416,7 @@ public class Kriging {
                 int rrr = svd.rank();
                 double[][] stemp = s.getArray();
                 for (int nn = 0; nn < stemp.length; nn++) {
-                    if (stemp[nn][nn]>0.03) {
+                    if (stemp[nn][nn]>0.003) {
                         stemp[nn][nn]=1/stemp[nn][nn];
                     }
                     else{
@@ -1417,8 +1433,20 @@ public class Kriging {
                     ss = ss + Wi[i][0]*NNPoitns.get(i).z;
                     vs = vs + Wi[i][0]* D[i][0];
                 }
-                KrigingPoint pnt = new KrigingPoint(pnts.get(n).x+1, pnts.get(n).y, ss);
+                KrigingPoint pnt = new KrigingPoint(pnts.get(n).x, pnts.get(n).y, ss);
                 pnt.v = vs + Wi[Wi.length-1][0];
+                if (pnt.v<=0) {
+                    pnt.v = pnt.v;
+                    for (int i = 0; i < NNPoitns.size(); i++) {
+                        System.out.println(NNPoitns.get(i).x + " " +
+                                NNPoitns.get(i).y + " " +
+                                NNPoitns.get(i).z );
+                                
+                    }
+                    
+                    
+                }
+                
                 outPnts.add(pnt);
 
                 //pnts.get(n).z = ss;
