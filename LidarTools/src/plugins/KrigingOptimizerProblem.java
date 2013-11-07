@@ -25,8 +25,14 @@ import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 /**
  *
- * @author Ehsan.Roshani
+ * @author Ehsan Roshani, Ph.D.
+    Department of Geography 
+    University of Guelph
+    Guelph, Ont. N1G 2W1 CANADA
+    Phone: (519) 824-4120 x53527
+    Email: eroshani@uoguelph.ca
  */
+
 public class KrigingOptimizerProblem extends Problem{
       // defining the lower and upper limits
   List<KrigingPoint> pnts = new ArrayList<>();                                     

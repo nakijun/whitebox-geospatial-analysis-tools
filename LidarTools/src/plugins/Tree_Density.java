@@ -27,10 +27,15 @@ import whitebox.structures.KdTree;
 import java.io.*;
 
 /**
- * WhiteboxPlugin is used to define a plugin tool for Whitebox GIS.
- * 
- * @author Dr. John Lindsay <jlindsay@uoguelph.ca>
+ *
+ * @author Ehsan Roshani, Ph.D.
+    Department of Geography 
+    University of Guelph
+    Guelph, Ont. N1G 2W1 CANADA
+    Phone: (519) 824-4120 x53527
+    Email: eroshani@uoguelph.ca
  */
+
 public class Tree_Density implements WhiteboxPlugin {
 
     private WhiteboxPluginHost myHost = null;

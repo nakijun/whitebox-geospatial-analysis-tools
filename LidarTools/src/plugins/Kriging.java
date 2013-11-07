@@ -70,12 +70,18 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFField;
 import whitebox.structures.KdTree;
 import whitebox.structures.KdTree.Entry;
 import java.util.Random;
+import jmetal.util.JMException;
 import whitebox.geospatialfiles.shapefile.attributes.DBFWriter;
 
         
 /**
  *
- * @author Ehsan.Roshani
+ * @author Ehsan Roshani, Ph.D.
+    Department of Geography 
+    University of Guelph
+    Guelph, Ont. N1G 2W1 CANADA
+    Phone: (519) 824-4120 x53527
+    Email: eroshani@uoguelph.ca
  */
 public class Kriging {
     
@@ -791,6 +797,63 @@ public class Kriging {
         frame.setVisible(true);
     }
     
+   /**
+    * This method uses NSGA algorithm to fit the Semi Variogram 
+    * @param semiType
+    * @param n
+    * @return 
+    */
+   Variogram TheoryVariogramNSGA(SemiVariogramType semiType, int n){
+       // Set solver parameters
+        
+        double [] y = new double[Binnes.length];
+        
+        for (int i = 0; i < y.length; i++) {
+            y[i]=Binnes[i][n].Value;
+            
+        }
+        int nNan = 0;
+        for (int i = 0; i < y.length; i++) {
+            if (!Double.isNaN(y[i])) {
+                nNan++;
+            }
+        }
+        x = new double[nNan];
+        
+        double [] y2 = new double[nNan];
+        int ntmp = 0;
+        for (int i = 0; i < y.length; i++) {
+            if (!Double.isNaN(y[i])) {
+                y2[ntmp]=y[i];
+                x[ntmp] = Binnes[i][nthSVariogram].Distance;
+                ntmp++;
+            }
+            
+        }
+        y = y2;
+        
+        double[][] pnts = new double[y.length][2];
+        for (int i = 0; i < y.length; i++) {
+            pnts[i][1]=y[i];
+            pnts[i][0]=x[i];
+        }
+        Variogram var = new Variogram();
+        var.Type = semiType;
+        SemiVariogramCurveFitter svcf = new SemiVariogramCurveFitter();
+        try {
+           var =  svcf.Run(pnts, semiType);
+        } catch (JMException ex) {
+            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SecurityException ex) {
+            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return var;
+   }
+   
     /**
      * 
      * @param semiType
@@ -802,6 +865,10 @@ public class Kriging {
         SVType = semiType;
         nthSVariogram = n;
         //x = xValue ;
+        //TheoryVariogramNSGA(SVType,n);
+        
+        
+        
         LevenbergMarquardt optimizer = new LevenbergMarquardt() {
                 // Override your objective function here
                 
@@ -1902,7 +1969,7 @@ public class Kriging {
      * @param Map   If true it calculate the pairs and Binnes for SV Map
      */
     public Variogram SemiVariogram(SemiVariogramType Type, double DistanseRatio, int NumberOfLags,
-            boolean Anisotropic){
+            boolean Anisotropic, boolean UseNSGA){
         this.NumberOfLags = NumberOfLags;
         try {
             CalPairs4Sec();
@@ -1923,7 +1990,7 @@ public class Kriging {
             n = 0;
             CalcBinnes4Sec(this.LagSize*this.NumberOfLags,this.Angle,this.Tolerance,this.BandWidth);
         }
-        return TheoryVariogram(Type,n);
+        return (UseNSGA)?TheoryVariogramNSGA(Type, n):TheoryVariogram(Type,n);
     }
     
     public Variogram SemiVariogram(SemiVariogramType Type, double Range, double Sill, double Nugget,
@@ -1953,6 +2020,7 @@ public class Kriging {
         }
         return res;
     }
+    
     public static void main(String[] args) 
     {
         //ChartPanel(createChart(createDataset()));
@@ -1962,7 +2030,7 @@ public class Kriging {
                 "G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp","Z");
         k.LagSize = 502.3;
         k.Anisotropic = false;
-        Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 0.27, 100,false);
+        Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 0.27, 100,false, true);
         
         //var.Range = 4160.672768;
         //var.Sill = 1835.571948;
@@ -1977,7 +2045,7 @@ public class Kriging {
         k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.dep", outPnts,false);
         k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\PntsVar100.dep", outPnts,true);
 
-        //k.DrawSemiVariogram(k.Binnes, var);
+        k.DrawSemiVariogram(k.Binnes, var);
         //k.calcBinSurface(SemiVariogramType.Spherical,  1, 99,false);
         //k.DrawSemiVariogramSurface(k.LagSize*(k.NumberOfLags), false);
         

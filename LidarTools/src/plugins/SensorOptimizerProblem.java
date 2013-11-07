@@ -6,8 +6,14 @@ package plugins;
 
 /**
  *
- * @author Dr. Ehsan Roshani
+ * @author Ehsan Roshani, Ph.D.
+    Department of Geography 
+    University of Guelph
+    Guelph, Ont. N1G 2W1 CANADA
+    Phone: (519) 824-4120 x53527
+    Email: eroshani@uoguelph.ca
  */
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
