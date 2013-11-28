@@ -67,6 +67,7 @@ public class SensorVarianceOptimizer {
          
      SensorVarianceOptimizer so = new SensorVarianceOptimizer();
      WhiteboxRaster img = so.OpenTargetRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\20120607flt.dep");
+     //WhiteboxRaster img = so.OpenTargetRaster("G:\\Optimized Sensory Network\\PALS\\20120719\\flt.dep");
     Problem   problem   ; // The problem to solve
     Algorithm algorithm ; // The algorithm to use
     Operator  crossover ; // Crossover operator

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE log SYSTEM "logger.dtd">
+<log>
+<record>
+  <date>2013-11-28T10:21:23</date>
+  <millis>1385652083259</millis>
+  <sequence>0</sequence>
+  <logger>jMetal</logger>
+  <level>INFO</level>
+  <class>plugins.SensorVarianceOptimizer</class>
+  <method>main</method>
+  <thread>1</thread>
+  <message>Total execution time: 67240192ms</message>
+</record>
+<record>
+  <date>2013-11-28T10:21:23</date>
+  <millis>1385652083273</millis>
+  <sequence>1</sequence>
+  <logger>jMetal</logger>
+  <level>INFO</level>
+  <class>plugins.SensorVarianceOptimizer</class>
+  <method>main</method>
+  <thread>1</thread>
+  <message>Variables values have been writen to file VAR</message>
+</record>
+<record>
+  <date>2013-11-28T10:21:23</date>
+  <millis>1385652083394</millis>
+  <sequence>2</sequence>
+  <logger>jMetal</logger>
+  <level>INFO</level>
+  <class>plugins.SensorVarianceOptimizer</class>
+  <method>main</method>
+  <thread>1</thread>
+  <message>Objectives values have been writen to file FUN</message>
+</record>
+</log>

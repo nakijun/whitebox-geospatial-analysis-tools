@@ -38,8 +38,6 @@ import plugins.Kriging;
 
 
 public class SemiVariogramCurveFitter {
-    public static Logger      logger_ ;      // Logger object
-    public static FileHandler fileHandler_ ; // FileHandler object
   
     public Kriging.Variogram Run(double[][] Points, Kriging.SemiVariogramType SVType)throws 
                                   JMException, 
@@ -57,11 +55,6 @@ public class SemiVariogramCurveFitter {
         HashMap  parameters ; // Operator parameters
 
         QualityIndicator indicators ; // Object to get quality indicators
-
-        // Logger object and file to store log messages
-        logger_      = Configuration.logger_ ;
-        fileHandler_ = new FileHandler("NSGAII_main.log"); 
-        logger_.addHandler(fileHandler_) ;
 
         indicators = null ;
         problem = new SemiVariogramCurveFitterProblem(Points,SVType,false);

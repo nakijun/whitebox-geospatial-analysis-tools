@@ -111,7 +111,7 @@ public class Kriging {
     public int NumberOfLags;
     public double LagSize;
     //public double 
-    private KdTree<Double> pointsTree;      //This is the point tree which will be filled in the calcPair method
+    public KdTree<Double> pointsTree;      //This is the point tree which will be filled in the calcPair method
     public Matrix DistanceMatrix;   //The matrix that contains the distance of each known point to all other known points
     public int nKown;               //Number of known points
     //public double[][] Points;       //Array of points location x=0, y = 1, z = 2
@@ -843,13 +843,13 @@ public class Kriging {
         try {
            var =  svcf.Run(pnts, semiType);
         } catch (JMException ex) {
-            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+            //Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
         } catch (SecurityException ex) {
-            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+            //Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+            //Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ClassNotFoundException ex) {
-            Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
+            //Logger.getLogger(Kriging.class.getName()).log(Level.SEVERE, null, ex);
         }
         return var;
    }
@@ -1892,10 +1892,12 @@ public class Kriging {
         CombinedRangeXYPlot combinedrangexyplot = new CombinedRangeXYPlot();
         for (int i = 0; i < Binnes[0].length; i++) {
             for (int k = 0; k < Binnes.length; k++) {
-                series.add(Binnes[k][i].Distance,Binnes[k][i].Value);
+                if (!Double.isNaN(Binnes[k][i].Value)) {
+                    series.add(Binnes[k][i].Distance,Binnes[k][i].Value);
+                }
             }
             sampleCollct.addSeries(series);
-            double[][] res =  CalcTheoreticalSVValues(variogram,  Binnes[Binnes.length-1][i].Distance);
+            double[][] res =  CalcTheoreticalSVValues(variogram, series.getMaxX());
             XYSeries seriesTSV = new XYSeries("Theoretical Variogram");
             for (int l = 0; l < res.length; l++) {
                 seriesTSV.add(res[l][0],res[l][1]);
@@ -2027,23 +2029,24 @@ public class Kriging {
         Kriging k = new Kriging();
         k.ConsiderNugget = false;
         k.Points  =  k.ReadPointFile(
-                "G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.shp","Z");
-        k.LagSize = 502.3;
+                "G:\\Optimized Sensory Network\\PALS\\20120607\\test.shp","Z");
+        k.LagSize = 2000;
         k.Anisotropic = false;
-        Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 0.27, 100,false, true);
+        Variogram var = k.SemiVariogram(SemiVariogramType.Spherical, 0.27, 50,false, true);
         
         //var.Range = 4160.672768;
         //var.Sill = 1835.571948;
         
-        k.resolution=914;
-        k.BMinX = 588907;
-        k.BMaxX = 600789;
-        k.BMinY = 5475107;
-        k.BMaxY = 5545485;
+        k.resolution = 914;
+        k.BMinX = 588450 + k.resolution/2;
+        k.BMaxX = 601246 - k.resolution/2;
+        k.BMinY = 5474650 + k.resolution/2;
+        k.BMaxY = 5545942 - k.resolution/2;
+
         List<KrigingPoint> outPnts = k.calcInterpolationPoints() ;
         outPnts = k.InterpolatePoints(var, outPnts, 5);
-        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts100.dep", outPnts,false);
-        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\PntsVar100.dep", outPnts,true);
+        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\Pnts60.dep", outPnts,false);
+        k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\PntsVar60.dep", outPnts,true);
 
         k.DrawSemiVariogram(k.Binnes, var);
         //k.calcBinSurface(SemiVariogramType.Spherical,  1, 99,false);

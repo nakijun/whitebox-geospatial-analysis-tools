@@ -35,8 +35,8 @@ import whitebox.geospatialfiles.shapefile.attributes.DBFException;
 public class SensorOptimizerProblem extends Problem{
     // defining the lower and upper limits
   public static  WhiteboxRaster Image;
-  public static final double [] LOWERLIMIT = {587993, 5474193};
-  public static final double [] UPPERLIMIT = {601703, 5546399};           
+  public static final double [] LOWERLIMIT = {588450, 5474650};
+  public static final double [] UPPERLIMIT = {601246, 5545942};           
   double difMin = 100000000;
   
    /**
@@ -106,12 +106,16 @@ public class SensorOptimizerProblem extends Problem{
       k.ConsiderNugget = false;
       k.LagSize = 2000;
       k.Anisotropic = false;
-      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false);
+      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false,true);
+      if (var.Range == 0) {
+          int ttt = 0;
+          Kriging.Variogram var1 = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false,true);
+      }
       k.resolution = 914;
-      k.BMinX = 588907;
-      k.BMaxX = 600789;
-      k.BMinY = 5475107;
-      k.BMaxY = 5545485;
+      k.BMinX = 588450 + k.resolution/2;
+      k.BMaxX = 601246 - k.resolution/2;
+      k.BMinY = 5474650 + k.resolution/2;
+      k.BMaxY = 5545942 - k.resolution/2;
 
       List<KrigingPoint> outPnts = k.calcInterpolationPoints();
       outPnts = k.InterpolatePoints(var, outPnts, 5);

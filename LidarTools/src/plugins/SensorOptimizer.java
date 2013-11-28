@@ -39,8 +39,6 @@ import whitebox.geospatialfiles.WhiteboxRaster;
 
 
 public class SensorOptimizer {
-    public static Logger      logger_ ;      // Logger object
-    public static FileHandler fileHandler_ ; // FileHandler object
   
     public WhiteboxRaster OpenTargetRaster (String inputRaster){
         WhiteboxRaster image;
@@ -77,11 +75,6 @@ public class SensorOptimizer {
     
     QualityIndicator indicators ; // Object to get quality indicators
 
-    // Logger object and file to store log messages
-    logger_      = Configuration.logger_ ;
-    fileHandler_ = new FileHandler("NSGAII_main.log"); 
-    logger_.addHandler(fileHandler_) ;
-        
     indicators = null ;
     if (args.length == 1) {
       Object [] params = {"Real"};
@@ -93,14 +86,7 @@ public class SensorOptimizer {
       indicators = new QualityIndicator(problem, args[1]) ;
     } // if
     else { // Default problem
-        problem = new SensorOptimizerProblem("Real", 10, img);
-      //problem = new Roshani("Real");
-      //problem = new Kursawe("BinaryReal", 3);
-      //problem = new Water("Real");
-      //problem = new ZDT1("ArrayReal", 100);
-      //problem = new ConstrEx("Real");
-      //problem = new DTLZ1("Real");
-      //problem = new OKA2("Real") ;
+        problem = new SensorOptimizerProblem("Real", 60, img);
     } // else
     
     algorithm = new NSGAII(problem);
@@ -134,27 +120,7 @@ public class SensorOptimizer {
     algorithm.setInputParameter("indicators", indicators) ;
     
     // Execute the Algorithm
-    long initTime = System.currentTimeMillis();
     SolutionSet population = algorithm.execute();
-    long estimatedTime = System.currentTimeMillis() - initTime;
     
-    // Result messages 
-    logger_.info("Total execution time: "+estimatedTime + "ms");
-    logger_.info("Variables values have been writen to file VAR");
-    population.printVariablesToFile("VAR");    
-    logger_.info("Objectives values have been writen to file FUN");
-    population.printObjectivesToFile("FUN");
-  
-    if (indicators != null) {
-      logger_.info("Quality indicators") ;
-      logger_.info("Hypervolume: " + indicators.getHypervolume(population)) ;
-      logger_.info("GD         : " + indicators.getGD(population)) ;
-      logger_.info("IGD        : " + indicators.getIGD(population)) ;
-      logger_.info("Spread     : " + indicators.getSpread(population)) ;
-      logger_.info("Epsilon    : " + indicators.getEpsilon(population)) ;  
-     
-      int evaluations = ((Integer)algorithm.getOutputParameter("evaluations")).intValue();
-      logger_.info("Speed      : " + evaluations + " evaluations") ;      
-    } // if
   } //main
 }

@@ -122,7 +122,7 @@ public class KrigingLagOptimizerProblem extends Problem{
 //              solution.getDecisionVariables()[1].getValue(),solution.getDecisionVariables()[2].getValue(),
 //              solution.getDecisionVariables()[3].getValue(),false);
       
-      Kriging.Variogram  var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,1 ,k.NumberOfLags,false);
+      Kriging.Variogram  var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical,1 ,k.NumberOfLags,false,true);
       
       
       //k.resolution = 914;

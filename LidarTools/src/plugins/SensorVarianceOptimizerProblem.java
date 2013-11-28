@@ -31,6 +31,7 @@ import jmetal.util.JMException;
 import plugins.KrigingPoint;
 import whitebox.geospatialfiles.WhiteboxRaster;
 import whitebox.geospatialfiles.shapefile.attributes.DBFException;
+import whitebox.structures.KdTree;
 
 
 public class SensorVarianceOptimizerProblem extends Problem{
@@ -111,15 +112,15 @@ public class SensorVarianceOptimizerProblem extends Problem{
       k.ConsiderNugget = false;
       k.LagSize = 2000;
       k.Anisotropic = false;
-      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false);
+      Kriging.Variogram var = k.SemiVariogram(Kriging.SemiVariogramType.Spherical, 1, 35,false,true);
       
      
       
       k.resolution = 914;
-      k.BMinX = 588907;
-      k.BMaxX = 600789;
-      k.BMinY = 5475107;
-      k.BMaxY = 5545485;
+      k.BMinX = 588450 + k.resolution/2;
+      k.BMaxX = 601246 - k.resolution/2;
+      k.BMinY = 5474650 + k.resolution/2;
+      k.BMaxY = 5545942 - k.resolution/2;
 
       List<KrigingPoint> outPnts = k.calcInterpolationPoints();
       outPnts = k.InterpolatePoints(var, outPnts, 5);
@@ -135,24 +136,34 @@ public class SensorVarianceOptimizerProblem extends Problem{
 //      
       
       double sDif = 0;
+      double eDif = 0;
       for (int i = 0; i < outPnts.size(); i++) {
-          sDif += (outPnts.get(i).v);
+          sDif += Math.abs(outPnts.get(i).v);
+          eDif += Math.abs(Image.grid[i]-outPnts.get(i).z);
       }
       
-      sDif = Math.abs(sDif);
+      //sDif = Math.abs(sDif);
     double [] f = new double[2] ; // 5 functions
     
-    
-      if (difMin>= sDif) {
-          difMin = sDif;
+    evaluateConstraints(solution);
+      if (difMin>= sDif+eDif & solution.getOverallConstraintViolation() == 0 ) {
+          difMin = sDif+eDif;
 //          for (int i = 0; i < outPnts.size(); i++) {
 //              System.out.print(i);
 //                      
 //          }
           k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\test"+".dep", outPnts,false);
           k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120607\\testVar"+".dep", outPnts,true);
+//          k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120629\\test"+".dep", outPnts,false);
+//          k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120629\\testVar"+".dep", outPnts,true);
+
+          //k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120719\\test"+".dep", outPnts,false);
+          //k.BuildRaster("G:\\Optimized Sensory Network\\PALS\\20120719\\testVar"+".dep", outPnts,true);
+
+          
           try {
               k.DrawShapeFile("G:\\Optimized Sensory Network\\PALS\\20120607\\test.shp", pnts);
+              //k.DrawShapeFile("G:\\Optimized Sensory Network\\PALS\\20120719\\test.shp", pnts);
           } catch (DBFException ex) {
               Logger.getLogger(SensorVarianceOptimizerProblem.class.getName()).log(Level.SEVERE, null, ex);
           } catch (IOException ex) {
@@ -163,11 +174,11 @@ public class SensorVarianceOptimizerProblem extends Problem{
     // First function
     f[0] = sDif ;
     // Second function
-    f[1] = sDif ;
+    f[1] = eDif ;
              
     solution.setObjective(0,f[0]);    
     solution.setObjective(1,f[1]);
-    System.out.println(sDif+" : "+ difMin);
+    System.out.println(sDif+" : "+ eDif + " : " + difMin);
   } // evaluate
 
   /** 
@@ -182,14 +193,37 @@ public class SensorVarianceOptimizerProblem extends Problem{
     double [] constraint = new double[1]; // 7 constraints
     
       for (int i = 0; i < k.Pairs.size(); i++) {
-          if (k.Pairs.get(i).Distance<= k.resolution) {
-              constraint[0]+=(k.resolution - k.Pairs.get(i).Distance);
+          if (k.Pairs.get(i).Distance<= 2 * k.resolution) {
+              constraint[0]+=(2 * k.resolution - k.Pairs.get(i).Distance);
           }
       }
+      List<KdTree.Entry<Double>> results;
+      double[] pnt = new double[2];
+      double dist = 0;
+      for (int i = 0; i < k.Points.size(); i++) {
+          pnt[1] = k.Points.get(i).x;
+          pnt[0] = k.Points.get(i).y;
+          
+          results = k.pointsTree.nearestNeighbor(pnt, 2, false);
+          if (results.get(0).distance != 0) {
+              dist = Math.sqrt(results.get(0).distance);
+          }
+          else
+          {
+              dist = Math.sqrt(results.get(1).distance);
+          }
+          
+          //dist = Math.sqrt(results.get(1).distance);
+          if (dist > 5 * k.resolution) {
+              constraint[0]+= dist - 5 * k.resolution;
+          }
  
-    solution.setOverallConstraintViolation(constraint[0]);    
+      }
+ 
+    solution.setOverallConstraintViolation(-constraint[0]);    
     solution.setNumberOfViolatedConstraint(1);  
-    System.out.println(constraint[0]);
+    //solution.setFitness(constraint[0]);
+    System.out.println(-constraint[0]);
   } // evaluateConstraints   
     
 }
