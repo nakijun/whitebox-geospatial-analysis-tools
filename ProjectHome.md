@@ -1,0 +1,12 @@
+# Welcome to the Whitebox GAT project #
+Whitebox Geospatial Analysis Tools (GAT) is an open-source and cross-platform Geographic information system (GIS) and remote sensing software package that is distributed under the GNU General Public License. It is intended for advanced geospatial analysis and data visualization in research and education settings. Click <a href='http://www.uoguelph.ca/~hydrogeo/Whitebox/screenshots.html'>here</a> to view some of the available screenshots.
+
+We are looking for volunteers to help with the work yet to be done, including working on the help documentation, testing and reporting bugs. Whitebox is now written using Java. There have also been many additions to version 2.0, including support for displaying vector ShapeFiles, plenty of new tools, and an improved user interface. As always, we welcome any feedback to help improve the software. Please contact Prof. John Lindsay (email: jlindsay@uoguelph.ca) with any comments.
+
+## Open-Access Software ##
+The Whitebox GAT project has adopted a novel approach for linking the software's development and user communities, known as software transparency. The philosophy of transparency in software states that the user 1) has the right to view the underlying workings of a tool or operation, and 2) should be able to access this information in a way that reduces, or ideally eliminates, any barriers to viewing and interpreting it. This concept was developed as a response to the fact that the code base of many open-source projects can be so massive and its organization so complex that individual users often find the task of interpreting the underlying code too daunting when they are interested in a small portion of the overall code base, e.g. if the user would like to know how a particular tool or algorithm operates. For some open-source projects, this characteristics can create a divide between the development and user communities, often restricting future development to a few individuals that have been involved in the project during the earliest periods of development. The <b><i>View Code</i></b> button that is present on all Whitebox GAT tools is the embodiment of this software-transparency philosophy by pointing the user to the specific region of the source-code that is relevant to a particular tool.
+
+## Download ##
+Due to changes in the Google Code Download policy, Whitebox GAT can now be downloaded directly from its homepage:
+
+http://www.uoguelph.ca/~hydrogeo/Whitebox/index.html
